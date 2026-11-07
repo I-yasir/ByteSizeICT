@@ -1,0 +1,44 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+.next/
+out/
+dist/
+build/
+next-env.d.ts
+
+# testing
+coverage/
+playwright-report/
+test-results/
+blob-report/
+
+# env (only the example is committed; covers .env, .env.local, .env.production, .env*.local …)
+.env*
+!.env.example
+
+# private keys and service-account credentials (Google SA JSON keys must never be committed)
+*.pem
+*.key
+*.p12
+*.pfx
+*service-account*.json
+*serviceaccount*.json
+*credentials*.json
+gcp-*.json
+
+# local agent/editor settings
+.claude/settings.local.json
+
+# supabase
+supabase/.temp/
+supabase/.branches/
+
+# misc
+.DS_Store
+*.tsbuildinfo
+npm-debug.log*
+pnpm-debug.log*
+.vercel

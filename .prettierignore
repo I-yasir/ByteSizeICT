@@ -1,0 +1,13 @@
+.next
+node_modules
+coverage
+playwright-report
+test-results
+pnpm-lock.yaml
+next-env.d.ts
+src/types/database.ts
+supabase/.temp
+# Hand-formatted context documents
+docs
+CLAUDE.md
+.cursorrules

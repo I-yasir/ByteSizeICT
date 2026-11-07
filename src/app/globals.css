@@ -1,0 +1,399 @@
+/*
+ * Design tokens — docs/03_UI_Spec.md §2–5. Components use only the Tailwind utilities generated
+ * from @theme below (bg-surface, text-fg-muted, border-border-strong, text-question, rounded-lg…).
+ * Tailwind's default palette, fonts, type scale, radii and shadows are reset so that only spec
+ * tokens exist.
+ */
+@import 'tailwindcss';
+
+/* next-themes toggles `.dark` on <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------- Light (default) */
+:root {
+  /* §2.1 Neutrals & surfaces */
+  --bg: #f6f7fb;
+  --surface: #ffffff;
+  --surface-2: #eef1f6;
+  --surface-3: #e2e7ef;
+  --border: #dde2ea;
+  --border-strong: #c3cad6;
+  --fg: #0f172a;
+  --fg-muted: #475569;
+  --fg-subtle: #5b687b;
+  --fg-inverse: #ffffff;
+  --overlay: rgba(15, 23, 42, 0.5);
+
+  /* §2.2 Brand */
+  --primary: #4338ca;
+  --primary-hover: #3730a3;
+  --primary-soft: #eef0ff;
+  --primary-soft-border: #c7cbfb;
+  --on-primary: #ffffff;
+  --focus-ring: #6366f1;
+
+  /* §2.3 Status */
+  --success: #15803d;
+  --success-soft: #dcfce7;
+  --danger: #b91c1c;
+  --danger-soft: #fee2e2;
+  --warning: #b45309;
+  --warning-soft: #fef3c7;
+  --info: #1d4ed8;
+  --info-soft: #dbeafe;
+  --teal: #0f766e;
+  --teal-soft: #ccfbf1;
+  --neutral-status: #5b687b;
+  --neutral-status-soft: #eef1f6;
+
+  /* §2.4 Special surfaces */
+  --solution-bg: #ecfdf3;
+  --solution-border: #a7f3d0;
+  --correct-option-bg: #f0fdf4;
+  --wrong-option-bg: #fef2f2;
+  --stat-bar-track: #e2e7ef;
+  --whatsapp: #1fa855;
+  --on-whatsapp: #ffffff;
+  --image-matte: #ffffff; /* §5 rule 4 — same in both themes */
+
+  /* §4.4 Elevation */
+  --elev-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --elev-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --elev-lg: 0 12px 32px rgba(15, 23, 42, 0.14);
+
+  /* §4.6 Motion (for hand-written CSS; utilities use duration-120/180/280) */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+}
+
+/* ---------------------------------------------------------------- Dark */
+.dark {
+  --bg: #0b0f17;
+  --surface: #121826;
+  --surface-2: #1a2233;
+  --surface-3: #232c40;
+  --border: #273246;
+  --border-strong: #3a4760;
+  --fg: #e7eaf0;
+  --fg-muted: #a6b0c3;
+  --fg-subtle: #8792a8;
+  --fg-inverse: #0b0f17;
+  --overlay: rgba(0, 0, 0, 0.6);
+
+  --primary: #8b93f8;
+  --primary-hover: #a5acfb;
+  --primary-soft: #1f1d4d;
+  --primary-soft-border: #3f3d8f;
+  --on-primary: #0b0f17;
+  --focus-ring: #a5acfb;
+
+  --success: #4ade80;
+  --success-soft: #0b2e1a;
+  --danger: #f87171;
+  --danger-soft: #3a1010;
+  --warning: #fbbf24;
+  --warning-soft: #3a2a06;
+  --info: #60a5fa;
+  --info-soft: #0e2145;
+  --teal: #2dd4bf;
+  --teal-soft: #06302d;
+  --neutral-status: #8792a8;
+  --neutral-status-soft: #1a2233;
+
+  --solution-bg: #0d2a1c;
+  --solution-border: #1f5a3c;
+  --correct-option-bg: #0f2a1b;
+  --wrong-option-bg: #2e1214;
+  --stat-bar-track: #232c40;
+  --whatsapp: #25d366;
+  --on-whatsapp: #0b0f17;
+
+  /* §4.4 — dark mode replaces shadows with a hairline border */
+  --elev-sm: 0 0 0 1px var(--border);
+  --elev-md: 0 0 0 1px var(--border);
+  --elev-lg: 0 0 0 1px var(--border-strong);
+}
+
+/* ---------------------------------------------------------------- Tailwind theme */
+@theme inline {
+  /* Colours (§2) — reset defaults so only tokens exist */
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-fg-inverse: var(--fg-inverse);
+  --color-overlay: var(--overlay);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-border: var(--primary-soft-border);
+  --color-on-primary: var(--on-primary);
+  --color-focus-ring: var(--focus-ring);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-teal: var(--teal);
+  --color-teal-soft: var(--teal-soft);
+  --color-neutral-status: var(--neutral-status);
+  --color-neutral-status-soft: var(--neutral-status-soft);
+  --color-solution-bg: var(--solution-bg);
+  --color-solution-border: var(--solution-border);
+  --color-correct-option-bg: var(--correct-option-bg);
+  --color-wrong-option-bg: var(--wrong-option-bg);
+  --color-stat-bar-track: var(--stat-bar-track);
+  --color-whatsapp: var(--whatsapp);
+  --color-on-whatsapp: var(--on-whatsapp);
+  --color-image-matte: var(--image-matte);
+
+  /* Typography families (§3.1) — next/font sets --font-hind / --font-inter on <html> */
+  --font-*: initial;
+  --font-sans: var(--font-hind), 'Hind Siliguri', 'Noto Sans Bengali', system-ui, sans-serif;
+  --font-num: var(--font-inter), 'Inter', system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Type scale (§3.2) */
+  --text-*: initial;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.125rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.375rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.625rem;
+  --text-question: 1.0625rem;
+  --text-question--line-height: 1.75rem;
+  --text-question--font-weight: 500;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.875rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 2.125rem;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 2.5rem;
+  --text-4xl: 2.25rem;
+  --text-4xl--line-height: 2.875rem;
+  --text-display: 3rem;
+  --text-display--line-height: 3.5rem;
+  --text-timer: 1.25rem;
+  --text-timer--line-height: 1.5rem;
+  --text-timer--font-weight: 700;
+
+  /* Radius (§4.3) */
+  --radius-*: initial;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* Elevation (§4.4) */
+  --shadow-*: initial;
+  --shadow-sm: var(--elev-sm);
+  --shadow-md: var(--elev-md);
+  --shadow-lg: var(--elev-lg);
+
+  /* Containers (§4.2) → max-w-marketing, max-w-app, max-w-exam, max-w-form, max-w-admin */
+  --container-marketing: 1120px;
+  --container-app: 960px;
+  --container-exam: 720px;
+  --container-form: 440px;
+  --container-admin: 1280px;
+  --spacing-sidebar: 248px;
+  /* Extra breakpoint for the navigator grid (UI Spec §7.9: 8 columns from 400 px) */
+  --breakpoint-xs: 25rem;
+
+  /* Motion (§4.6) */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-shimmer: shimmer 1.2s linear infinite;
+  --animate-pulse-critical: pulse-critical 1s ease-in-out infinite;
+  --animate-check-in: check-in 180ms var(--ease-out);
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+  @keyframes pulse-critical {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+  @keyframes check-in {
+    from {
+      transform: scale(0.8);
+    }
+    to {
+      transform: scale(1);
+    }
+  }
+}
+
+/* Z-index scale (§4.5) — Tailwind v4 has no z-index theme namespace, so named utilities */
+@utility z-base {
+  z-index: 0;
+}
+@utility z-sticky {
+  z-index: 30;
+}
+@utility z-fab {
+  z-index: 40;
+}
+@utility z-dropdown {
+  z-index: 50;
+}
+@utility z-overlay {
+  z-index: 60;
+}
+@utility z-toast {
+  z-index: 70;
+}
+@utility z-submit-overlay {
+  z-index: 80;
+}
+
+/* Touch target floor (§1) and safe-area helpers for sticky bars (§7.10, §7.21, §7.22) */
+@utility tap-target {
+  min-height: 48px;
+  min-width: 48px;
+}
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+/* Skeleton shimmer (§7.17); static under reduced motion via the base layer rule */
+@utility skeleton-shimmer {
+  background-image: linear-gradient(90deg, var(--surface-2), var(--surface-3), var(--surface-2));
+  background-size: 200% 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+/* Sheet/dialog height caps (§7.9, §7.11) */
+@utility max-h-dvh-90 {
+  max-height: 90dvh;
+}
+@utility max-h-dvh-75 {
+  max-height: 75dvh;
+}
+/* Result celebration (docs/02_AppFlow.md §5.5) — reduced motion disables it in the base layer */
+@keyframes confetti-fall {
+  from {
+    transform: translateY(-10vh) rotate(0deg);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(70vh) rotate(540deg);
+    opacity: 0;
+  }
+}
+@utility confetti-piece {
+  animation: confetti-fall 1.4s var(--ease-out) forwards;
+}
+/* Long exam pages (TRD §8.10) */
+@utility cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 320px;
+}
+
+/* ---------------------------------------------------------------- Rich text (§8) */
+@layer components {
+  .rich-text {
+    overflow-wrap: anywhere;
+  }
+  .rich-text .rt-code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background-color: var(--surface-2);
+    border-radius: var(--radius-sm);
+    padding: 0.1em 0.35em;
+  }
+  .rich-text .rt-pre {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    line-height: 1.375rem;
+    background-color: var(--surface-2);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    margin: 8px 0;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .rich-text .rt-math-display {
+    display: block;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px 0;
+  }
+  .rich-text .katex {
+    color: currentColor;
+    font-size: 1.05em;
+  }
+}
+
+/* ---------------------------------------------------------------- Base */
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    background-color: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  /* Inputs never below 16px so iOS does not zoom (§3.2) */
+  input,
+  select,
+  textarea {
+    font-size: max(1rem, 16px);
+  }
+  /* Focus is always visible in both themes (§5 rule 7) */
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background-color: var(--primary-soft);
+    color: var(--fg);
+  }
+  ::placeholder {
+    color: var(--fg-subtle);
+  }
+  /* §1 Calm — reduced motion disables non-essential animation */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

@@ -1,0 +1,60 @@
+# ByteSizeICT — Cursor Agent Rules
+# Canonical, more detailed version: CLAUDE.md (keep both in sync; CLAUDE.md wins on conflict).
+
+## Pre-flight (every task)
+Before any edit or mutating command, read IN FULL, in order:
+1. docs/01_PRD.md      (scope, user stories, NON-GOALS)
+2. docs/02_AppFlow.md  (routes, guards, state machines, screens, error codes)
+3. docs/03_UI_Spec.md  (design tokens, component states)
+4. docs/04_TRD.md      (locked stack + exact versions, folder structure, API contracts, security)
+5. docs/05_Schema.md   (DDL, RLS, SQL functions, auth flow)
+6. docs/06_Plan.md     (checklist; find "Current Step")
+Then state which plan step you are executing. If the request maps to no step, ask before proceeding.
+docs 01–06 override the original concept file.
+
+## Plan discipline
+- Execute steps strictly in order; respect Deps; one step at a time; scoped diffs.
+- AFTER EVERY COMPLETED STEP, update docs/06_Plan.md in the same turn:
+  tick [x] (or [!] blocked / [~] in progress) → fill "Done: YYYY-MM-DD — summary; files; verification"
+  → advance "Current Step" → update the Progress table → add a Decision Log row for any deviation.
+- Never tick a step unless its Verify check passed. At phase gates run `pnpm run ci` and stop for review.
+
+## Conflicts
+- Technical precedence: 05_Schema > 04_TRD > 02_AppFlow > 03_UI_Spec > 01_PRD. Scope: 01_PRD wins.
+- Hard-to-reverse ambiguity (schema/auth/API/deps) → STOP and ask. Small reversible choices → decide + log.
+- Changing a locked decision: get approval → update docs first → log → implement.
+
+## Hard rules
+- Never build PRD §6 Non-Goals or R2-reserved tables.
+- Only TRD §2 packages at EXACT versions (pnpm add -E; no ^ or ~). No new deps without a Decision Log entry.
+  Forbidden: any ORM, Supabase Auth/@supabase/ssr, NextAuth, Redux/Zustand/Jotai, TanStack Query, UI kits with themes,
+  CSS-in-JS, axios, moment, npm `xlsx`, middleware.ts (use src/proxy.ts). pnpm + Node 22 only.
+- Browser never calls Supabase directly; the service_role key lives only in `import 'server-only'` modules.
+- NEVER send correct_option / explanation / option stats to the client before the attempt is final AND the publish gate
+  has passed. Student question reads go only through src/features/attempts/paper.ts → view paper_questions.
+- Time + scoring are enforced in SQL (deadline_at + 15 s grace). Client timer is cosmetic.
+- PINs/passwords: argon2id + AUTH_PEPPER; never log/store/return plaintext PINs (except the credentials email and the
+  one-time manual-PIN dialog); no secrets in the outbox.
+- Scope every student query by session.studentId; every admin entry calls requireAdmin().
+- New table ⇒ RLS enabled + forced + pgTAP test. Zod at every boundary. Audit rows in the same transaction.
+- No dangerouslySetInnerHTML except server-rendered output of src/lib/content/render.ts.
+- DB changes: new numbered migration only (never edit one applied to staging/production) → pnpm db:reset && pnpm db:types && pnpm db:test.
+  Transactional logic = SQL functions (security definer, search_path pinned, EXECUTE to service_role only).
+  src/types/database.ts is generated — never hand-edit.
+
+## Conventions
+- Folder structure exactly per TRD §3. Logic in src/features/<domain>/{service,queries,actions}.ts — not in components/routes.
+- Server Components by default; 'use client' only for interactive islands.
+- Envelope: { ok: true, data } | { ok: false, error: { code, message, field?, meta? } } with canonical ErrorCodes (AppFlow §7.1).
+- Use exact route paths, enum values, state names and error codes from the docs.
+- Tailwind with design tokens only: no hex literals, no arbitrary values, no inline styles (except dynamic widths).
+- All UI strings via next-intl; update messages/bn.json AND messages/en.json together. Bangla default. Latin digits.
+  Times displayed in Asia/Dhaka.
+- Mobile-first (360 px), touch targets ≥ 48 px, one primary action per screen, dark mode via tokens.
+- TS strict, no `any`, no non-null assertions on external data. Match surrounding style; comments explain why.
+- Before marking done: pnpm lint && pnpm typecheck && pnpm test (+ pnpm db:test if SQL changed,
+  + pnpm check:answer-leak if exam/paper code changed).
+
+## Reporting
+End each turn with: step ID(s), files changed, verification evidence, new Current Step, Decision Log entries / open questions.
+Commit only when asked: one commit per step, message "P<id>: <summary>".

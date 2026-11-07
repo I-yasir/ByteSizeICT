@@ -1,0 +1,1206 @@
+{
+  "meta": {
+    "title": "ByteSizeICT",
+    "description": "Master ICT MCQ with daily exams."
+  },
+  "common": {
+    "appName": "ByteSizeICT",
+    "loading": "Loading…",
+    "retry": "Try again",
+    "goHome": "Go home",
+    "back": "Back",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "saved": "Saved",
+    "close": "Close",
+    "submit": "Submit",
+    "copy": "Copy",
+    "copied": "Copied",
+    "login": "Log in",
+    "logout": "Log out",
+    "enrollNow": "Enroll Now",
+    "offline": "You're offline",
+    "somethingWentWrong": "Something went wrong. Please try again.",
+    "showPin": "Show PIN",
+    "hidePin": "Hide PIN",
+    "numberCopied": "Number copied",
+    "pressToCopy": "Number selected — press and hold to copy",
+    "menu": "Menu",
+    "openMenu": "Open menu",
+    "comingSoon": "Coming soon",
+    "chatOnWhatsapp": "Chat on WhatsApp",
+    "skipToContent": "Skip to main content",
+    "scrollTop": "Back to top"
+  },
+  "theme": {
+    "label": "Theme",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "language": {
+    "label": "Language",
+    "bn": "বাংলা",
+    "en": "English",
+    "switchTo": "Change language: {language}"
+  },
+  "nav": {
+    "home": "Home",
+    "routine": "Routine",
+    "faq": "FAQ",
+    "dashboard": "Dashboard",
+    "exams": "Exams",
+    "results": "Results",
+    "profile": "Profile",
+    "main": "Main menu",
+    "sample": "Free exam",
+    "enroll": "Enroll",
+    "notifications": "Notifications"
+  },
+  "home": {
+    "hero": {
+      "title": "Master ICT MCQ with Daily Exams",
+      "subtitle": "Chapter-wise exams with instant results and step-by-step solutions.",
+      "trySample": "Try a Free Sample Exam",
+      "enroll": "Enroll Now"
+    },
+    "strip": {
+      "next": "Next exam",
+      "startsIn": "Starts in",
+      "liveLogin": "Live now — log in to take it"
+    },
+    "routine": {
+      "title": "Exam routine",
+      "subtitle": "Exams in the next two weeks",
+      "seeAll": "See full routine",
+      "empty": "New exams will be announced soon.",
+      "followUs": "Follow us on WhatsApp for updates."
+    },
+    "why": {
+      "title": "Why prepare with us",
+      "items": {
+        "daily": {
+          "title": "Daily practice",
+          "body": "Regular exams keep your preparation on track."
+        },
+        "chapter": {
+          "title": "Chapter-wise exams",
+          "body": "Revise every chapter of the syllabus separately."
+        },
+        "instant": {
+          "title": "Instant results",
+          "body": "Your marks and analysis the moment you submit."
+        },
+        "solutions": {
+          "title": "Solutions with explanations",
+          "body": "Understand why each correct answer is correct."
+        },
+        "rank": {
+          "title": "Rank and progress",
+          "body": "See where you stand and how you improve."
+        },
+        "recovery": {
+          "title": "Missed an exam?",
+          "body": "Many exams stay open for a late attempt."
+        }
+      }
+    },
+    "proof": {
+      "title": "Results speak",
+      "topPerformers": "Top performers",
+      "testimonials": "What students say"
+    },
+    "how": {
+      "title": "How it works",
+      "steps": {
+        "pay": {
+          "title": "Pay",
+          "body": "Send money via bKash, Nagad, Rocket or bank and enter the Transaction ID."
+        },
+        "email": {
+          "title": "Get login details by email",
+          "body": "After we verify your payment, you get your mobile login and PIN by email."
+        },
+        "start": {
+          "title": "Start exams",
+          "body": "Log in and take exams on the routine."
+        }
+      }
+    },
+    "pricing": {
+      "title": "Plans and pricing",
+      "subtitle": "Choose the plan that suits you",
+      "popular": "Popular",
+      "choose": "Choose this plan",
+      "days": "{days} days of access",
+      "until": "Access until {date}"
+    },
+    "sample": {
+      "title": "Try it first",
+      "body": "Take a short free exam without logging in and see how our exams work.",
+      "cta": "Start free exam"
+    },
+    "faq": {
+      "title": "Frequently asked questions",
+      "more": "More questions"
+    }
+  },
+  "errors": {
+    "validation": "Please check the highlighted fields.",
+    "unauthenticated": "Please log in to continue.",
+    "sessionRevoked": "You've been logged out. Please log in again.",
+    "forbidden": "You don't have access to this page.",
+    "notFound": "We couldn't find what you were looking for.",
+    "rateLimited": "Too many attempts. Please try again in a little while.",
+    "invalidCredentials": "Wrong PIN. {attemptsLeft, plural, one {# attempt} other {# attempts}} left.",
+    "adminInvalidCredentials": "Email or password is incorrect.",
+    "locked": "Too many wrong attempts. Try again after {time}.",
+    "suspended": "Your account is suspended. Please contact support.",
+    "accessInactive": "Your access isn't active. Renew to continue.",
+    "pinSameAsOld": "Your new PIN must be different from your current PIN.",
+    "pinTooWeak": "This PIN is too easy to guess. Please choose another one.",
+    "trxDuplicate": "This Transaction ID has already been submitted. If you think this is a mistake, contact us on WhatsApp.",
+    "pendingExists": "You already have a request being verified. We'll email you soon.",
+    "admissionNotPending": "This request has already been processed.",
+    "examNotAvailable": "This exam is no longer available.",
+    "examNotStarted": "This exam hasn't started yet.",
+    "examInvalidTimes": "Please check the exam's start and end times.",
+    "examNoQuestions": "Add at least one question before publishing.",
+    "examInactiveQuestions": "All questions must be active before publishing.",
+    "examLocked": "This can't be changed because students have already started the exam.",
+    "attemptClosed": "Time is over for this exam.",
+    "questionDuplicate": "A question with the same text already exists.",
+    "questionLockedCorrectOption": "The correct answer can't be changed because this question was used in an exam that students have taken.",
+    "importBadHeaders": "The file's columns don't match the template.",
+    "importTooLarge": "The file is too large. Maximum 2,000 rows and 5 MB.",
+    "internal": "Something went wrong. Please try again.",
+    "mobileInvalid": "Enter a valid mobile number (01XXXXXXXXX).",
+    "emailInvalid": "Enter a valid email address.",
+    "methodRequired": "Choose a payment method.",
+    "trxInvalid": "Enter a valid Transaction ID."
+  },
+  "countdown": {
+    "d": "days",
+    "h": "hrs",
+    "m": "min",
+    "s": "sec"
+  },
+  "adminNav": {
+    "label": "Admin menu",
+    "overview": "Overview",
+    "admissions": "Admissions",
+    "students": "Students",
+    "questions": "Question bank",
+    "taxonomy": "Chapters & topics",
+    "exams": "Exams",
+    "settings": "Settings",
+    "audit": "Audit log",
+    "logout": "Log out"
+  },
+  "footer": {
+    "tagline": "Daily ICT MCQ exams with instant results and step-by-step solutions.",
+    "links": "Links",
+    "privacy": "Privacy policy",
+    "contact": "Contact",
+    "rights": "© {year} {brand}. All rights reserved."
+  },
+  "exam": {
+    "minutes": "{n} min",
+    "questions": "{n} questions",
+    "marks": "{n} marks",
+    "negative": "−{mark} per wrong answer",
+    "noNegative": "No negative marking"
+  },
+  "routinePage": {
+    "title": "Exam routine",
+    "subtitle": "All upcoming exams, by date.",
+    "recent": "Exams in the last 7 days",
+    "empty": "New exams will be announced soon.",
+    "followUs": "Follow us on WhatsApp for updates."
+  },
+  "enroll": {
+    "title": "Enroll",
+    "subtitle": "Pay, then fill in the short form below. No name needed.",
+    "step1": "Pay",
+    "step2": "Submit details",
+    "choosePlan": "Choose a plan",
+    "amount": "Amount to pay",
+    "days": "{days} days",
+    "until": "Until {date}",
+    "noAccounts": "Payment details will be added soon. Contact us on WhatsApp if you need help.",
+    "renewalNote": "You're renewing. Use the same mobile number — no new account is created.",
+    "banner": {
+      "pending": "You already have a request being verified. We'll email you soon.",
+      "rateLimited": "Too many attempts. Please try again in a little while.",
+      "network": "Couldn't send. Check your internet and try again."
+    },
+    "form": {
+      "mobile": "Mobile number",
+      "mobileHelper": "This number will be your login ID.",
+      "email": "Email",
+      "emailHelper": "We'll send your login details to this email.",
+      "method": "Payment method",
+      "trx": "Transaction ID (TrxID)",
+      "trxHelper": "You'll find it in the payment confirmation message.",
+      "submit": "Submit request",
+      "submitting": "Submitting…"
+    }
+  },
+  "enrollSuccess": {
+    "title": "Request received!",
+    "body": "We'll verify your payment and send your login details to your email shortly.",
+    "next": {
+      "title": "What happens next",
+      "verify": "We usually verify payments within 12 hours.",
+      "email": "You'll get your mobile number and PIN by email.",
+      "login": "Log in with your mobile number and PIN, then set your own PIN."
+    },
+    "trySample": "Try a sample exam",
+    "backHome": "Back to home"
+  },
+  "faqPage": {
+    "title": "Frequently asked questions",
+    "subtitle": "Answers about payment, access, missed exams and devices.",
+    "empty": "FAQs will be added soon.",
+    "contactTitle": "Still have questions?",
+    "contactBody": "Contact us directly."
+  },
+  "privacy": {
+    "title": "Privacy policy",
+    "intro": "How {brand} collects and uses your personal data.",
+    "collect": {
+      "title": "What we collect",
+      "body": "Your mobile number, email, payment method and Transaction ID, and your exam answers and results. We do not ask for your name."
+    },
+    "use": {
+      "title": "Why we use it",
+      "body": "To verify payments, create your account and send login details, run exams and show results, and improve the service."
+    },
+    "retention": {
+      "title": "How long we keep it",
+      "body": "For as long as your account exists, plus 1 year for exam data. PINs are never stored in a readable form."
+    },
+    "sharing": {
+      "title": "Who we share it with",
+      "body": "We never sell your data. Trusted providers send emails and store data for us. Leaderboards show only partly hidden mobile numbers."
+    },
+    "rights": {
+      "title": "Your rights",
+      "body": "You can ask to see, correct or delete your data."
+    },
+    "contact": {
+      "title": "Contact",
+      "body": "For any privacy question, contact us: {contact}"
+    }
+  },
+  "login": {
+    "title": "Log in",
+    "subtitle": "Log in with your mobile number and PIN.",
+    "mobile": "Mobile number",
+    "pin": "PIN",
+    "remember": "Remember me on this device",
+    "submit": "Log in",
+    "pinFormat": "Enter your 4 to 6 digit PIN.",
+    "network": "Couldn't connect. Check your internet and try again.",
+    "forgot": "Forgot PIN?",
+    "forgotTitle": "Reset your PIN",
+    "forgotBody": "Contact us on WhatsApp to reset your PIN.",
+    "forgotCta": "Contact on WhatsApp",
+    "noAccount": "Not enrolled yet?",
+    "enrollLink": "Enroll",
+    "reasons": {
+      "new_login": "You were logged out because your account was used on another device.",
+      "admin": "Your session was ended by the admin.",
+      "pin_changed": "Your PIN was changed. Please log in again.",
+      "expired": "Your session expired. Please log in again."
+    }
+  },
+  "changePin": {
+    "title": "Set your own PIN",
+    "subtitle": "For your security, set a new PIN.",
+    "newPin": "New PIN",
+    "confirm": "Confirm PIN",
+    "submit": "Save PIN",
+    "success": "PIN updated",
+    "mismatch": "The PINs don't match.",
+    "rules": "4 to 6 digits. Not an easy PIN like 1234 or 0000."
+  },
+  "adminLogin": {
+    "title": "Admin login",
+    "subtitle": "Sign in to the admin panel.",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Log in"
+  },
+  "errorPage": {
+    "title": "Something went wrong",
+    "body": "Please try again.",
+    "retry": "Try again",
+    "home": "Go home"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "The page you're looking for doesn't exist or was moved.",
+    "home": "Go home",
+    "dashboard": "Dashboard"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome back",
+    "active": "Active · {days} days left",
+    "renew": "Renew",
+    "state": {
+      "active": "Active",
+      "expired": "Expired",
+      "cancelled": "Cancelled",
+      "suspended": "Suspended"
+    },
+    "primary": "Current exam",
+    "noneNow": "No exam right now.",
+    "noneUpcoming": "No upcoming exams yet.",
+    "statsTitle": "Stats",
+    "stats": {
+      "taken": "Exams taken",
+      "average": "Average",
+      "best": "Best",
+      "streak": "Streak"
+    },
+    "statsHint": "Take your first exam to see stats.",
+    "upcoming": "Upcoming",
+    "upcomingEmpty": "Nothing scheduled yet.",
+    "minutes": "{n} min",
+    "missed": "Missed exams",
+    "recent": "Recent results",
+    "recentEmpty": "Your results will appear here.",
+    "allResults": "All results"
+  },
+  "studentExams": {
+    "title": "My exams",
+    "filterLabel": "Filter exams",
+    "filters": {
+      "all": "All",
+      "live": "Live",
+      "upcoming": "Upcoming",
+      "completed": "Completed",
+      "missed": "Missed"
+    },
+    "empty": "No exams — {filter}.",
+    "status": {
+      "completed": "Completed",
+      "in_progress": "In progress",
+      "locked": "Locked",
+      "upcoming": "Upcoming",
+      "live": "Live now",
+      "missed_available": "Missed · Take now",
+      "missed": "Missed"
+    },
+    "viewResult": "View result",
+    "resume": "Resume",
+    "renew": "Renew",
+    "start": "Start exam",
+    "takeNow": "Take now",
+    "late": "Late attempt",
+    "startsIn": "Starts in"
+  },
+  "lobby": {
+    "title": "Exam details",
+    "back": "My exams",
+    "when": "When",
+    "duration": "Duration",
+    "questions": "Questions",
+    "totalMarks": "Total marks",
+    "perQuestion": "Marks per question",
+    "negative": "Each wrong answer: −{mark}. Skipped: 0.",
+    "lateWindow": "Late attempt allowed",
+    "lateUnranked": "Taking it now counts as a late attempt and won't be ranked.",
+    "rulesTitle": "Instructions",
+    "rules": {
+      "autosave": "Every answer saves automatically.",
+      "autosubmit": "The exam submits itself when time ends.",
+      "single": "Each exam can be taken once.",
+      "device": "Don't open the exam on two devices."
+    },
+    "start": "Start exam",
+    "takeNow": "Take now",
+    "resume": "Resume",
+    "viewResult": "View result",
+    "closed": "This exam is no longer available.",
+    "startsIn": "Starts in",
+    "network": "Couldn't connect. Please try again."
+  },
+  "examPage": {
+    "pageTitle": "Exam",
+    "question": "Question {n}",
+    "answered": "Answered",
+    "unanswered": "Unanswered",
+    "marked": "Marked",
+    "mark": "Mark for review",
+    "unmark": "Remove mark",
+    "answeredCount": "Answered {x}/{n}",
+    "minutes": "{n} min",
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "navigator": "Questions",
+    "freeSample": "Free sample",
+    "preview": "Preview",
+    "info": "{marks} mark(s) per question · {n} questions.",
+    "negative": "−{mark} per wrong answer.",
+    "noNegative": "No negative marking.",
+    "autosave": "Answers save automatically.",
+    "previewNote": "Preview — answers are not saved.",
+    "showAnswers": "Show correct answers",
+    "end": "You've reached the end",
+    "offline": "You're offline. Your answers are saved on this device and will sync automatically.",
+    "sync": {
+      "synced": "All answers saved",
+      "pending": "Saving…",
+      "offline": "Offline — saved on this device",
+      "stopped": "Sync stopped"
+    },
+    "confirmTitle": "Submit exam?",
+    "reviewUnanswered": "Review unanswered",
+    "submitting": "Submitting…",
+    "timeUp": "Time's up! Submitting your answers…",
+    "dontClose": "Don't close this page.",
+    "submitFailed": "Couldn't submit",
+    "savedOnDevice": "Your answers are safe on this device. Check your internet and try again.",
+    "tryAgain": "Try again",
+    "revokedTitle": "You've been logged out",
+    "revokedBody": "Your account was used on another device. Log in again to continue — your answers are safe on this device.",
+    "inactiveTitle": "Access stopped",
+    "inactiveBody": "Your access has been stopped by the admin.",
+    "loginAgain": "Log in again",
+    "goRenew": "Go to renewal",
+    "fiveLeft": "5 minutes left",
+    "oneLeft": "1 minute left",
+    "legend": {
+      "answered": "Answered",
+      "unanswered": "Unanswered",
+      "marked": "Marked",
+      "correct": "Correct",
+      "incorrect": "Incorrect",
+      "skipped": "Skipped"
+    }
+  },
+  "review": {
+    "title": "Question review",
+    "question": "Question {n}",
+    "filters": {
+      "correct": "Correct",
+      "incorrect": "Incorrect",
+      "skipped": "Skipped"
+    },
+    "showing": "Showing {n} of {total}",
+    "selectFilter": "Select at least one filter.",
+    "solution": "Solution",
+    "noSolution": "No explanation provided.",
+    "statsTitle": "How everyone answered",
+    "statsRow": "Option {option}: {pct} percent chose this",
+    "skippedShort": "Skip",
+    "srCorrect": "Correct answer.",
+    "srYourAnswer": "Your answer."
+  },
+  "result": {
+    "title": "Result",
+    "marks": "Marks obtained",
+    "position": "Your position",
+    "highest": "Highest marks",
+    "rankLater": "Position and highest marks will be published after {time}.",
+    "answersLater": "Answers and solutions will be available after {time}.",
+    "lateUnranked": "Late attempt — not ranked",
+    "submittedAt": "Submitted {time}",
+    "autoSubmitted": "auto-submitted",
+    "correct": "Correct",
+    "incorrect": "Incorrect",
+    "skipped": "Skipped",
+    "accuracy": "Accuracy",
+    "analysis": "Analysis"
+  },
+  "sample": {
+    "title": "Free sample exam",
+    "unavailable": "The sample exam isn't available right now.",
+    "enroll": "Enroll Now",
+    "resultTitle": "Sample exam result",
+    "resultBody": "Enroll for regular exams, rankings and progress tracking."
+  },
+  "results": {
+    "title": "My results",
+    "empty": "You haven't taken any exams yet.",
+    "goExams": "Go to exams",
+    "late": "Late",
+    "loadMore": "Load more"
+  },
+  "profile": {
+    "title": "Profile",
+    "account": "Account",
+    "mobile": "Mobile",
+    "email": "Email",
+    "plan": "Plan",
+    "startsAt": "Starts",
+    "expiresAt": "Expires",
+    "emailNote": "To change your email, contact support.",
+    "settings": "Settings",
+    "language": "Language",
+    "theme": "Theme",
+    "changePin": "Change PIN",
+    "currentPin": "Current PIN",
+    "newPin": "New PIN",
+    "confirmPin": "Confirm new PIN",
+    "pinRules": "4 to 6 digits. Not an easy PIN.",
+    "savePin": "Change PIN",
+    "pinChanged": "PIN changed. Other devices have been logged out.",
+    "mismatch": "The PINs don't match.",
+    "wrongCurrent": "Your current PIN is incorrect.",
+    "logout": "Log out"
+  },
+  "renew": {
+    "title": "Renew",
+    "choosePlan": "Choose a plan",
+    "days": "{days} days",
+    "until": "Until {date}",
+    "renewWith": "Renew with this plan",
+    "pastResults": "View past results",
+    "support": "Help on WhatsApp",
+    "expired": {
+      "title": "Your access expired on {date}.",
+      "body": "Renew to continue. Pay, then submit the request with the same mobile number."
+    },
+    "cancelled": {
+      "title": "Your access has been cancelled.",
+      "body": "Contact us or renew to continue."
+    },
+    "future": {
+      "title": "Your access starts on {date}.",
+      "body": "Exams will appear here once it starts."
+    },
+    "active": {
+      "title": "Your subscription is active until {date}.",
+      "body": "You can renew early to extend it."
+    }
+  },
+  "admin": {
+    "table": {
+      "select": "Select",
+      "selectAll": "Select all",
+      "selectRow": "Select row"
+    },
+    "overview": {
+      "title": "Overview",
+      "total": "Total students",
+      "active": "Active",
+      "expired": "Expired",
+      "cancelled": "Cancelled",
+      "suspended": "Suspended",
+      "pending": "Pending admissions",
+      "revenue": "Revenue this month",
+      "examsThisWeek": "Exams in the next 7 days",
+      "upcoming": "Upcoming exams",
+      "noUpcoming": "No upcoming exams.",
+      "activity": "Recent activity",
+      "noActivity": "No activity yet.",
+      "allActivity": "Full audit log"
+    },
+    "admissions": {
+      "apply": "Apply",
+      "prev": "Previous page",
+      "next": "Next page",
+      "showing": "Showing {from}–{to} of {total}",
+      "title": "Admissions",
+      "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "all": "All"
+      },
+      "search": "Mobile, email or TrxID",
+      "method": "Method",
+      "allMethods": "All methods",
+      "cols": {
+        "submitted": "Submitted",
+        "mobile": "Mobile",
+        "email": "Email",
+        "method": "Method",
+        "trx": "TrxID",
+        "amount": "Amount / plan",
+        "kind": "Kind",
+        "flags": "Flags",
+        "actions": "Actions"
+      },
+      "kind": {
+        "new": "New",
+        "renewal": "Renewal"
+      },
+      "flags": {
+        "mobileExists": "Mobile exists",
+        "emailUsedBy": "Email used by {mobile}"
+      },
+      "approve": "Approve",
+      "reject": "Reject",
+      "allDone": "All caught up — no pending admissions.",
+      "empty": "No requests found.",
+      "detail": "Request details",
+      "reason": "Reason",
+      "existingStudent": "Existing student · expires {date} — open profile",
+      "history": "Earlier requests for this mobile",
+      "noHistory": "No earlier requests.",
+      "approveTitle": "Approve {mobile}",
+      "renewalHint": "This is a renewal — the existing account is extended; no new PIN is sent.",
+      "plan": "Plan",
+      "amount": "Amount (৳)",
+      "startsAt": "Starts",
+      "expiresAt": "Expires",
+      "dhakaTime": "Times are in Dhaka (UTC+6).",
+      "note": "Note",
+      "optional": "(optional)",
+      "cancel": "Cancel",
+      "approveAndSend": "Approve & send email",
+      "approvedNew": "Approved. Login details emailed to {email}.",
+      "approvedRenewal": "Renewal approved.",
+      "approvedEmailFailed": "Approved, but the email failed. Use 'Resend credentials' on the student page.",
+      "alreadyProcessed": "This request has already been processed.",
+      "approveError": "Couldn't approve. Check the dates and try again.",
+      "rejectTitle": "Reject {mobile}",
+      "details": "Details",
+      "sendRejectionEmail": "Send rejection email",
+      "rejected": "Request rejected.",
+      "reasons": {
+        "trx_not_found": "TrxID not found",
+        "amount_mismatch": "Amount mismatch",
+        "duplicate_payment": "Duplicate payment",
+        "other": "Other"
+      }
+    },
+    "students": {
+      "apply": "Apply",
+      "prev": "Previous page",
+      "next": "Next page",
+      "showing": "Showing {from}–{to} of {total}",
+      "title": "Students",
+      "profile": "Student profile",
+      "states": {
+        "all": "All",
+        "active": "Active",
+        "expired": "Expired",
+        "cancelled": "Cancelled",
+        "suspended": "Suspended"
+      },
+      "search": "Mobile or email",
+      "label": "Label",
+      "allLabels": "All labels",
+      "cols": {
+        "mobile": "Mobile",
+        "email": "Email",
+        "label": "Label",
+        "state": "State",
+        "expiry": "Expires",
+        "lastLogin": "Last login",
+        "exams": "Exams"
+      },
+      "empty": "No students found.",
+      "selected": "{n} selected",
+      "extendBy": "Extend by",
+      "days": "days",
+      "extend": "Extend",
+      "extended": "Extended {n} student(s).",
+      "tabs": {
+        "overview": "Overview",
+        "payments": "Payments",
+        "exams": "Exams",
+        "audit": "Audit"
+      },
+      "fields": {
+        "plan": "Plan",
+        "starts": "Starts",
+        "expires": "Expires",
+        "credentials": "Credentials",
+        "mustChangePin": "Must change PIN",
+        "lastLogin": "Last login",
+        "statusReason": "Status reason",
+        "note": "Private note"
+      },
+      "credentials": {
+        "pending": "Not sent",
+        "sent": "Sent",
+        "failed": "Failed"
+      },
+      "yes": "Yes",
+      "no": "No",
+      "noPayments": "No payments.",
+      "noExams": "No exams taken yet.",
+      "noAudit": "No audit entries.",
+      "inProgress": "In progress",
+      "late": "Late",
+      "actions": {
+        "menu": "Actions",
+        "cancelBtn": "Cancel",
+        "confirm": "Confirm",
+        "done": "Done",
+        "save": "Save",
+        "reason": "Reason",
+        "extend": {
+          "label": "Extend validity",
+          "body": "If already expired, days count from today.",
+          "days": "{n} days",
+          "custom": "Number of days"
+        },
+        "expiry": {
+          "label": "Set expiry date",
+          "body": "Times are in Dhaka (UTC+6).",
+          "field": "Expires"
+        },
+        "cancel": {
+          "label": "Cancel subscription",
+          "body": "All sessions end immediately. A renewal reactivates the account.",
+          "typeDigits": "Type the last 3 digits of the mobile to confirm"
+        },
+        "suspend": {
+          "label": "Suspend",
+          "body": "The student won't be able to log in."
+        },
+        "reactivate": {
+          "label": "Reactivate",
+          "body": "The account becomes active again."
+        },
+        "reset": {
+          "label": "Reset PIN",
+          "body": "A new PIN is created and all sessions end.",
+          "auto": "Auto-generate",
+          "manual": "Set manually",
+          "pin": "New PIN",
+          "pinRules": "4–6 digits, not an easy PIN",
+          "sendEmail": "Email the new PIN",
+          "showOnce": "This PIN is shown only once — share it with the student.",
+          "emailed": "New PIN emailed to {email}.",
+          "emailFailed": "PIN reset, but the email failed."
+        },
+        "resend": {
+          "label": "Resend credentials",
+          "body": "A new PIN will be generated and emailed."
+        },
+        "logout": {
+          "label": "Force logout",
+          "body": "All of the student's sessions will end."
+        },
+        "edit": {
+          "label": "Edit details",
+          "email": "Email",
+          "adminLabel": "Label (e.g. Batch A)",
+          "note": "Private note"
+        }
+      }
+    },
+    "taxonomy": {
+      "title": "Chapters & topics",
+      "description": "Subject → chapter → topic, plus tags.",
+      "edit": "Edit",
+      "addChapter": "Add chapter",
+      "addTopic": "Add topic",
+      "addSubject": "Add subject",
+      "deleteTopic": "Delete {name}",
+      "deleteTag": "Delete {name}",
+      "deleted": "Deleted",
+      "saved": "Saved",
+      "tags": "Tags",
+      "newTag": "New tag",
+      "add": "Add",
+      "dialog": {
+        "subject": "Subject",
+        "chapter": "Chapter",
+        "topic": "Topic"
+      },
+      "slug": "Slug",
+      "slugHelp": "Lowercase letters and hyphens, e.g. ict",
+      "number": "Chapter number",
+      "nameEn": "Name (English)",
+      "nameBn": "Name (Bangla)",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "questions": {
+      "apply": "Apply",
+      "prev": "Previous page",
+      "next": "Next page",
+      "showing": "Showing {from}–{to} of {total}",
+      "title": "Question bank",
+      "import": "Import",
+      "new": "New question",
+      "search": "Search question text",
+      "chapter": "Chapter",
+      "allChapters": "All chapters",
+      "difficulty": "Difficulty",
+      "allDifficulties": "All difficulties",
+      "difficulties": {
+        "easy": "Easy",
+        "medium": "Medium",
+        "hard": "Hard"
+      },
+      "type": "Type",
+      "allTypes": "All types",
+      "types": {
+        "knowledge": "Knowledge",
+        "application": "Application",
+        "multi_point": "Multi-point"
+      },
+      "sort": "Sort",
+      "sorts": {
+        "newest": "Newest",
+        "most_used": "Most used",
+        "lowest_correct": "Lowest % correct"
+      },
+      "tags": "Tags",
+      "status": "Status",
+      "statuses": {
+        "draft": "Draft",
+        "active": "Active",
+        "archived": "Archived"
+      },
+      "unusedOnly": "Unused only",
+      "cols": {
+        "stem": "Question",
+        "chapter": "Chapter / topic",
+        "difficulty": "Difficulty",
+        "used": "Used",
+        "correct": "% correct",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "edit": "Edit",
+      "duplicate": "Duplicate",
+      "duplicated": "Copy created",
+      "selected": "{n} selected",
+      "chooseTag": "Choose a tag",
+      "addTag": "Add tag",
+      "removeTag": "Remove tag",
+      "setStatus": {
+        "active": "Activate",
+        "draft": "Set draft",
+        "archived": "Archive"
+      },
+      "bulkDone": "Updated",
+      "emptyFiltered": "No questions match these filters.",
+      "emptyBank": "Your question bank is empty. Add your first question or import a file."
+    },
+    "editor": {
+      "newTitle": "New question",
+      "editTitle": "Edit question",
+      "chapter": "Chapter",
+      "topic": "Topic",
+      "optional": "(optional)",
+      "newTopic": "New topic name",
+      "addTopic": "Add topic",
+      "stem": "Question",
+      "latexHint": "Use $…$ or $$…$$ for math and `…` for code.",
+      "addImage": "Add image",
+      "image": "Image",
+      "replaceImage": "Replace image",
+      "removeImage": "Remove image",
+      "options": "Options (choose the correct one)",
+      "optionLabel": "Option {key}",
+      "correct": "Correct",
+      "optionRequired": "Enter text or add an image.",
+      "explanation": "Explanation / solution",
+      "difficulty": "Difficulty",
+      "difficulties": {
+        "easy": "Easy",
+        "medium": "Medium",
+        "hard": "Hard"
+      },
+      "type": "Type",
+      "types": {
+        "knowledge": "Knowledge",
+        "application": "Application",
+        "multi_point": "Multi-point"
+      },
+      "source": "Source (e.g. Dhaka Board)",
+      "boardYear": "Year",
+      "status": "Status",
+      "statuses": {
+        "draft": "Draft",
+        "active": "Active",
+        "archived": "Archived"
+      },
+      "tags": "Tags",
+      "newTag": "New tag",
+      "addTag": "Add tag",
+      "save": "Save",
+      "saveAnother": "Save & add another",
+      "cancel": "Cancel",
+      "preview": "Preview",
+      "saved": "Question saved",
+      "usedBanner": "Used in {n} exam(s) that students have taken — changes also affect past reviews, and the correct answer can't change.",
+      "duplicateTitle": "A similar question exists",
+      "duplicateBody": "A question with the same text is already in the bank.",
+      "openDuplicate": "Open the existing question",
+      "saveAnyway": "Save anyway",
+      "imageTooLarge": "Images must be 1 MB or smaller.",
+      "imageType": "PNG, JPG or WebP only.",
+      "uploadFailed": "Upload failed."
+    },
+    "import": {
+      "title": "Import questions",
+      "description": "Add many questions at once from a CSV or Excel file.",
+      "step1": "1. Download the template and upload your file",
+      "templateXlsx": "Excel template",
+      "templateCsv": "CSV template",
+      "drop": "Drop the file here or click to choose",
+      "limits": ".csv or .xlsx · max 2,000 rows · 5 MB",
+      "validating": "Validating…",
+      "step2": "2. Validation result",
+      "valid": "Valid",
+      "invalid": "Invalid",
+      "duplicates": "Duplicates",
+      "errorsTitle": "Invalid rows",
+      "downloadErrors": "Error report (CSV)",
+      "row": "Row",
+      "column": "Column",
+      "message": "Problem",
+      "duplicateRows": "Skipped as duplicates: rows {rows}",
+      "defaultStatus": "Status after import",
+      "statusDraft": "Draft",
+      "statusActive": "Active",
+      "importN": "Import {n} valid questions",
+      "nothingToImport": "There are no valid rows to import.",
+      "done": "Imported {n} questions.",
+      "doneDetail": "Skipped {d} duplicates and {e} invalid rows.",
+      "toBank": "Go to the question bank"
+    },
+    "exams": {
+      "title": "Exams",
+      "new": "New exam",
+      "builder": "Exam builder",
+      "all": "All",
+      "empty": "No exams.",
+      "featured": "Featured on homepage",
+      "sample": "Sample",
+      "counts": "{q} questions · {a} attempts"
+    },
+    "examForm": {
+      "title": "Title",
+      "description": "Description",
+      "optional": "(optional)",
+      "subject": "Subject",
+      "chapterLabel": "Chapter label",
+      "isSample": "This is the free sample exam",
+      "dhakaTime": "All times are in Dhaka (UTC+6).",
+      "startsAt": "Starts at",
+      "liveEndsAt": "Live window ends",
+      "liveEndsHelp": "Leave empty for start + duration.",
+      "accessMode": "Access",
+      "modes": {
+        "fixed": "Fixed time",
+        "window": "Open for a window",
+        "always": "Always available"
+      },
+      "lateUntil": "Late attempts until",
+      "resultsPublishAt": "Publish rank at",
+      "answersPublishAt": "Publish answers at",
+      "publishHelp": "Leave empty to use the default rule on publish.",
+      "rankLateAttempts": "Include late attempts in ranking",
+      "duration": "Duration (minutes)",
+      "marksPerQuestion": "Marks per question",
+      "negativeMark": "Negative mark",
+      "shuffleQuestions": "Shuffle questions",
+      "shuffleOptions": "Shuffle options",
+      "allowMark": "Allow mark-for-review",
+      "showOptionStats": "Show option statistics",
+      "lockedField": "Locked because students have started",
+      "save": "Save",
+      "create": "Create",
+      "saved": "Settings saved",
+      "lockedError": "This can't change because students have started the exam.",
+      "timesError": "Check the times — the live end must be after the start, and late-until after the live end.",
+      "saveError": "Couldn't save."
+    },
+    "builder": {
+      "tabs": {
+        "settings": "Settings",
+        "questions": "Questions",
+        "audience": "Audience",
+        "publish": "Publish"
+      },
+      "bank": "Question bank",
+      "chapter": "Chapter",
+      "allChapters": "All chapters",
+      "difficulty": "Difficulty",
+      "allDifficulties": "All difficulties",
+      "search": "Search",
+      "add": "Add",
+      "added": "Added",
+      "noResults": "Nothing found.",
+      "selectedTitle": "{n} selected · {marks} marks",
+      "saveQuestions": "Save questions",
+      "savedQuestions": "Question list saved",
+      "lockedQuestions": "Questions can't change because students have started.",
+      "emptySelection": "Add questions from the bank.",
+      "drag": "Drag to reorder",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "remove": "Remove",
+      "audienceTitle": "Who takes this exam",
+      "audience": {
+        "all_active": "All active students",
+        "selected": "Selected students"
+      },
+      "studentSearch": "Mobile or email",
+      "addLabel": "Add everyone with label:",
+      "chosen": "{n} chosen",
+      "saveAudience": "Save",
+      "savedAudience": "Audience saved",
+      "status": {
+        "draft": "Draft",
+        "published": "Published",
+        "archived": "Archived"
+      },
+      "phase": {
+        "draft": "Draft",
+        "scheduled": "Scheduled",
+        "live": "Live",
+        "late_window": "Late window",
+        "closed": "Closed",
+        "archived": "Archived"
+      },
+      "attempts": "{n} attempts",
+      "checks": {
+        "title": "Has a title",
+        "questions": "At least one question",
+        "active": "All questions are active",
+        "times": "Start and end times are set",
+        "window": "Late window is set"
+      },
+      "liveNowWarning": "The start time has passed — publishing makes the exam live immediately.",
+      "preview": "Preview as student",
+      "publish": "Publish",
+      "published": "Exam published",
+      "unpublish": "Unpublish",
+      "unpublished": "Back to draft",
+      "archive": "Archive",
+      "archived": "Archived",
+      "feature": "Feature on homepage",
+      "unfeature": "Remove from homepage",
+      "featuredSaved": "Homepage updated",
+      "results": "View results"
+    },
+    "examResults": {
+      "title": "Exam results",
+      "export": "Export CSV",
+      "empty": "No one has taken this exam yet.",
+      "participants": "Participants",
+      "lateShort": "late",
+      "average": "Average",
+      "highest": "Highest",
+      "lowest": "Lowest",
+      "ranking": "Ranking (out of {total})",
+      "cols": {
+        "rank": "Rank",
+        "mobile": "Mobile",
+        "label": "Label",
+        "score": "Score",
+        "cis": "C/I/S",
+        "late": "Late",
+        "submitted": "Submitted"
+      },
+      "analysis": "Question analysis (lowest % correct first)",
+      "qcols": {
+        "position": "No.",
+        "question": "Question",
+        "correct": "% correct",
+        "wrong": "Most chosen wrong"
+      }
+    },
+    "settings": {
+      "title": "Settings",
+      "tabs": {
+        "brand": "Brand",
+        "contact": "Contact",
+        "payments": "Payments",
+        "plans": "Plans",
+        "homepage": "Homepage",
+        "policies": "Policies",
+        "integrations": "Integrations"
+      },
+      "save": "Save",
+      "saved": "Saved",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "optional": "(optional)",
+      "active": "Active",
+      "inactive": "Inactive",
+      "sortOrder": "Order",
+      "brandName": "Platform name",
+      "uploadLogo": "Upload logo",
+      "replaceLogo": "Replace logo",
+      "removeLogo": "Remove logo",
+      "logoTooLarge": "The logo must be 512 KB or smaller.",
+      "uploadFailed": "Upload failed.",
+      "whatsapp": "WhatsApp link",
+      "messenger": "Messenger link",
+      "phone": "Phone",
+      "email": "Email",
+      "method": "Method",
+      "accountNumber": "Number",
+      "accountLabel": "Type (e.g. Personal)",
+      "accountHolder": "Account name",
+      "instructionsBn": "Instructions (Bangla)",
+      "instructionsEn": "Instructions (English)",
+      "addAccount": "Add account",
+      "editAccount": "Edit account",
+      "addPlan": "Add plan",
+      "editPlan": "Edit plan",
+      "code": "Code",
+      "codeHelp": "Lowercase letters and hyphens, e.g. 3-months",
+      "nameBn": "Name (Bangla)",
+      "nameEn": "Name (English)",
+      "validity": "Validity",
+      "validityDays": "Number of days",
+      "validityFixed": "Until a fixed date",
+      "durationDays": "Days",
+      "fixedExpiresAt": "Expiry date",
+      "price": "Price (৳)",
+      "features": "Features",
+      "featuresHelp": "One per line: Bangla | English",
+      "highlighted": "Show as popular",
+      "deactivate": "Deactivate",
+      "daysN": "{n} days",
+      "hero": "Hero section",
+      "heroHelp": "Leave empty to use the default text.",
+      "heroTitle": "Headline",
+      "heroSubtitle": "Subtitle",
+      "testimonials": "Testimonials",
+      "addTestimonial": "Add testimonial",
+      "quote": "Quote",
+      "attribution": "Attribution (e.g. HSC 2025 student)",
+      "topPerformers": "Top performers",
+      "addPerformer": "Add",
+      "performerLabel": "Label",
+      "scoreText": "Score",
+      "faq": "FAQ",
+      "addFaq": "Add question",
+      "question": "Question",
+      "answer": "Answer",
+      "removeItem": "Remove",
+      "maxDevices": "Devices allowed at once",
+      "maxDevicesHelp": "A new login ends the oldest session.",
+      "visibleWhenInactive": "Past results stay visible after expiry",
+      "lastSync": "Last Sheets sync",
+      "pendingJobs": "Pending jobs",
+      "failedJobs": "Failed jobs",
+      "retryFailed": "Retry failed",
+      "retried": "Queued for retry"
+    },
+    "audit": {
+      "apply": "Apply",
+      "prev": "Previous page",
+      "next": "Next page",
+      "showing": "Showing {from}–{to} of {total}",
+      "title": "Audit log",
+      "action": "Action",
+      "entity": "Entity",
+      "allEntities": "All entities",
+      "entityId": "ID",
+      "from": "From",
+      "to": "To",
+      "empty": "No entries."
+    }
+  }
+}
