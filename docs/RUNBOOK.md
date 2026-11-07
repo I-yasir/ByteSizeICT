@@ -4,7 +4,7 @@ Audience: the person deploying and operating ByteSizeICT. Follow the sections in
 Every command assumes the repository root, Node 22 (`nvm use`) and pnpm 10.18.0.
 References: TRD §5 (env vars), §9 (integrations), §10 (security); Schema §7–§8 (RLS, cron, Vault).
 
-> **Before launch, release blockers are open** (Plan P4.20, P4.23; see §12). Resolved: P4.22 dependency upgrade (next 16.4.5, zod 4.6.7) on 2026-11-07.
+> **Before launch, release blockers are open** (Plan P4.23, P4.24; see §12). Resolved on 2026-11-07: P4.22 dependency upgrade (next 16.4.5, zod 4.6.7) and P4.20 exam-route JS budget.
 
 ---
 
@@ -151,8 +151,10 @@ vercel env pull .env.production.local --environment=production
 ```
 
 ```bash
-set -a; source .env.production.local; set +a; pnpm admin:create --email coach@example.com --name "Coach"
+node --env-file=.env.production.local --conditions=react-server --import tsx scripts/create-admin.ts --email coach@example.com --name "Coach"
 ```
+
+(Node's own `--env-file` loader is used on purpose: `set -a; source …` breaks on values such as `EMAIL_FROM=ByteSizeICT <no-reply@…>`, found in the 2026-11-07 rehearsal.)
 
 ```bash
 rm .env.production.local
@@ -250,11 +252,24 @@ Not in the database: sample → enroll click-through (Vercel Analytics events `s
 
 ## 11. Staging dry run (Plan P4.23 verify)
 
-Repeat §2–§6 on a separate Supabase project + Vercel preview environment named *staging*, with `GOOGLE_SHEET_ID` pointing at a copy of the sheet, then run the §7 smoke test against staging by hand. (The Playwright suite, `pnpm test:e2e`, runs against a local production build and the local Supabase stack; it is not pointed at staging.) Record the date and any deviations in `docs/06_Plan.md` (P4.23 Done note).
+Repeat §2–§6 on a separate Supabase project + Vercel preview environment named *staging*, with `GOOGLE_SHEET_ID` pointing at a copy of the sheet, then run the §7 smoke test against staging by hand. Record the date and any deviations in `docs/06_Plan.md` (P4.23 Done note).
+
+**Local rehearsal (done 2026-11-07).** §2 and §6–§7 were rehearsed on an isolated, empty local Supabase stack (separate ports, seed disabled — the same state as a fresh production project):
+
+| Step | Result |
+| --- | --- |
+| §2.5 migrations on an empty DB | 0001–0013 applied cleanly |
+| §2.6 verification SQL | 22 RLS tables · 4 cron jobs · `public-assets` public / `question-media` private · all 5 extensions · 0 students / 0 admins |
+| §2.7 Vault secrets | `site_url`, `cron_secret` created; `outbox-kick` reached the app's drain route (HTTP 200) |
+| §2.8 `bootstrap.prod.sql` | 1 subject · 6 chapters · 12 topics · 3 plans · 6 settings · 0 users/questions/exams |
+| §6 `admin:create` | works; **fixed** the env-loading command above |
+| §7 smoke (Playwright against a production build on that stack, fresh pepper/cron secret) | 71/71: enroll → approve → emailed PIN → login → forced PIN change, login security, sessions, enrollment validation, RLS over HTTP, headers/cookies, exam builder/locks, exam runtime (offline, timing, ordering), access modes, results gates, leak test, import, JS budget |
+
+Not covered locally (needs the real accounts): Supabase cloud `db push` and dashboard settings, Vercel env/domain/region, Resend DNS + real delivery, the Google service account and sheet.
 
 ---
 
 ## 12. Open release blockers (as of 2026-11-07)
 
-1. **Performance budget (P4.20)**: exam route ships 212 KB gzipped JS vs the 180 KB budget; Lighthouse CI and the 200-VU k6 run need a staging deployment.
-2. **Staging dry run (P4.23)**: §2–§7 have not yet been executed end to end on a staging project.
+1. **Staging dry run (P4.23)**: §2–§7 rehearsed locally (§11) but not yet on a real staging project.
+2. **Staging measurements (P4.24)**: Lighthouse mobile and the 200-VU k6 save test need a staging deployment. (Exam route JS budget met locally: 166.5 KB < 180 KB.)
