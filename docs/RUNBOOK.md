@@ -142,25 +142,36 @@ Everything in §2 works on Free (pg_cron, pg_net, Vault, Storage), with these di
 
 ---
 
-## 6. First admin account
+## 6. Initial admin accounts (two, before the first deploy)
 
-Admins are created only by the CLI (PRD A-01). Use a temporary env file that is **never committed** and delete it afterwards:
+Admins are created only by the CLI (PRD A-01), straight into the production database, so this can run **before** Vercel exists. Create a temporary file `.env.production.local` (git-ignored; never commit it) holding the **same production values you will give Vercel** — all six are required:
+
+```
+NEXT_PUBLIC_SITE_URL=https://<your-project>.vercel.app
+NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+SUPABASE_SERVICE_ROLE_KEY=<service_role key>
+AUTH_PEPPER=<the production pepper>
+CRON_SECRET=<the production cron secret>
+```
+
+> The script also reads `.env.local` and uses it for any variable **missing** from this file. A missing `AUTH_PEPPER` would silently hash the admins with the local dev pepper and they could not log in on Vercel. Keep the file complete.
+
+Then create both admins (each run prompts twice for a hidden password, min 12 characters):
 
 ```bash
-vercel env pull .env.production.local --environment=production
+node --env-file=.env.production.local --conditions=react-server --import tsx scripts/create-admin.ts --email owner@example.com --name "Owner"
 ```
 
 ```bash
-node --env-file=.env.production.local --conditions=react-server --import tsx scripts/create-admin.ts --email coach@example.com --name "Coach"
+node --env-file=.env.production.local --conditions=react-server --import tsx scripts/create-admin.ts --email assistant@example.com --name "Assistant"
 ```
-
-(Node's own `--env-file` loader is used on purpose: `set -a; source …` breaks on values such as `EMAIL_FROM=ByteSizeICT <no-reply@…>`, found in the 2026-11-07 rehearsal.)
 
 ```bash
 rm .env.production.local
 ```
 
-The script prompts for a password (min 12 chars; hidden input). Up to 3 admins, equal rights.
+Check in the Supabase SQL editor: `select email, display_name, is_active from admins;` → two rows. Re-running the command for the same email resets that admin's password. R1 allows up to 3 admins with equal rights. (`node --env-file` is used on purpose: `set -a; source …` breaks on values such as `EMAIL_FROM=ByteSizeICT <no-reply@…>`, found in the 2026-11-07 rehearsal.)
 
 ---
 
@@ -168,7 +179,7 @@ The script prompts for a password (min 12 chars; hidden input). Up to 3 admins, 
 
 1. Log in at `/admin/login`; fill in *Settings*: brand, contact links, **payment accounts** (real numbers), plans/prices, FAQ, testimonials (real ones only).
 2. In a private window: `/` renders, `/sample` works end to end, `/enroll` shows the payment accounts.
-3. Enroll with a **test mobile** you control and a real inbox; approve it in `/admin/admissions`; the credentials email arrives; log in; forced PIN change; dashboard.
+3. Log in with **both** admin accounts. Enroll with a **test mobile** you control and a real inbox; approve it in `/admin/admissions`; the credentials email arrives; log in; forced PIN change; dashboard.
 4. Build a 2-question exam starting in 2 minutes, publish, take it with the test student, submit; check the result page, `/admin/exams/<id>/results`, the CSV, and the `Exam Results` sheet row.
 5. Delete the test data:
 
