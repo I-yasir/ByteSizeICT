@@ -6,7 +6,7 @@ import { createStudent, expect, loginStudent, openAttempt, startAttempt, test } 
  * the network (PRD §5 budget < 180 KB, excluding KaTeX fonts), plus time-to-first-card for 100 questions.
  */
 test('exam route JS budget and 100-question load @desktop', async ({ page, context }, testInfo) => {
-  // Known over budget (209.5 KB on 2026-11-07, Plan P4.20 [!]). `test.fail` keeps CI green while the
+  // Known over budget (212 KB on next 16.4.5, 2026-11-07; Plan P4.20 [!]). `test.fail` keeps CI green while the
   // number is still reported; once the route is under 180 KB this flips to a failure — then delete it.
   test.fail(true, 'Exam route JS is over the 180 KB budget (tracked in Plan P4.20)');
   const student = await createStudent();

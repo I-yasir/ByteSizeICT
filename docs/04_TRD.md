@@ -43,7 +43,7 @@ Status: **Locked for R1.** The stack, versions, folder layout and security const
 
 ## 2. Locked Tech Stack & Exact Versions
 
-Install with **exact** versions (`pnpm add -E`). `package.json` must contain no `^` or `~`. If an exact version below fails to resolve, use the **latest patch of the same minor**, then record it in the Decision Log and update this table.
+Install with **exact** versions (`pnpm add -E`). Security upgrade 2026-11-07 (P4.22): next 16.0.1 → 16.4.5, react/react-dom 19.2.0 → 19.2.9, zod 4.1.12 → 4.6.7, eslint-config-next → 16.4.5 (owner-approved; Decision Log). `package.json` must contain no `^` or `~`. If an exact version below fails to resolve, use the **latest patch of the same minor**, then record it in the Decision Log and update this table.
 
 ### 2.1 Runtime & tooling
 | Tool | Version | Notes |
@@ -57,11 +57,11 @@ Install with **exact** versions (`pnpm add -E`). `package.json` must contain no 
 ### 2.2 Application dependencies
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `next` | **16.0.1** | App Router, RSC, Server Actions, Turbopack (default) |
-| `react`, `react-dom` | **19.2.0** | |
+| `next` | **16.4.5** | App Router, RSC, Server Actions, Turbopack (default) |
+| `react`, `react-dom` | **19.2.9** | |
 | `tailwindcss`, `@tailwindcss/postcss` | **4.1.16** | CSS-first config in `globals.css` (`@theme`); no `tailwind.config.js` |
 | `@supabase/supabase-js` | **2.76.1** | Server-only DB client (no `@supabase/ssr`: no Supabase Auth) |
-| `zod` | **4.1.12** | All input validation (shared client/server schemas) |
+| `zod` | **4.6.7** | All input validation (shared client/server schemas) |
 | `next-intl` | **4.4.0** | i18n without routing (cookie locale) |
 | `next-themes` | **0.4.6** | Light/Dark/System |
 | `@node-rs/argon2` | **2.0.2** | argon2id hashing for PINs and admin passwords |
@@ -90,7 +90,7 @@ Install with **exact** versions (`pnpm add -E`). `package.json` must contain no 
 | `jsdom` | **27.0.1** |
 | `@playwright/test` | **1.56.1** |
 | `@axe-core/playwright` | **4.11.0** |
-| `eslint` / `eslint-config-next` | **9.38.0** / **16.0.1** |
+| `eslint` / `eslint-config-next` | **9.38.0** / **16.4.5** |
 | `prettier` / `prettier-plugin-tailwindcss` | **3.6.2** / **0.7.1** |
 | `react-email` | **4.3.2** (email preview: `pnpm email:dev`) |
 | `tsx` | **4.20.6** (scripts) |

@@ -25,7 +25,9 @@ export function kickOutbox(): void {
       const { drainOutbox } = await import('./drain');
       await drainOutbox({ limit: 10 });
     } catch (error) {
-      console.error(JSON.stringify({ level: 'error', event: 'outbox.kick_failed', error: String(error) }));
+      // PostgREST errors are plain objects, so String() would print "[object Object]".
+      const detail = error instanceof Error ? error.message : JSON.stringify(error);
+      console.error(JSON.stringify({ level: 'error', event: 'outbox.kick_failed', error: detail }));
     }
   });
 }

@@ -4,7 +4,7 @@ Audience: the person deploying and operating ByteSizeICT. Follow the sections in
 Every command assumes the repository root, Node 22 (`nvm use`) and pnpm 10.18.0.
 References: TRD §5 (env vars), §9 (integrations), §10 (security); Schema §7–§8 (RLS, cron, Vault).
 
-> **Before launch, two release blockers are open** (Plan P4.20, P4.22; see §12). Do not go live until they are closed.
+> **Before launch, release blockers are open** (Plan P4.20, P4.23; see §12). Resolved: P4.22 dependency upgrade (next 16.4.5, zod 4.6.7) on 2026-11-07.
 
 ---
 
@@ -70,6 +70,15 @@ openssl rand -hex 32      # CRON_SECRET  (shared by Vercel and Supabase Vault)
    To change one later: `select vault.update_secret((select id from vault.secrets where name = 'site_url'), 'https://new-url');`
 8. **Reference data**: run `supabase/bootstrap.prod.sql` once (SQL editor, or `psql "$DATABASE_URL" -f supabase/bootstrap.prod.sql`). It inserts only the ICT subject/chapters/topics, three placeholder plans and default settings. **Never run `supabase/seed.sql` against production** (it contains test users with a known PIN).
 9. Collect for Vercel: *Project Settings → API*: Project URL, `anon` key, `service_role` key.
+
+### 2a. Running on the Supabase **Free** plan (owner decision 2026-11-07)
+
+Everything in §2 works on Free (pg_cron, pg_net, Vault, Storage), with these differences:
+
+- **No point-in-time recovery or restorable daily backups.** Run the §8 `pg_dump` **weekly** (not monthly) and before every migration, and keep the dumps off-site. Upgrade to Pro before the student count or revenue makes data loss unacceptable (TRD §10.12 assumes Pro).
+- **Inactive projects are paused** after about a week without API traffic; a paused project takes the site down until you press *Restore* in the dashboard. Daily student use keeps it awake; check during holidays.
+- **Limits:** 500 MB database, 1 GB storage, 2 free projects per organisation. `select pg_size_pretty(pg_database_size('postgres'));` shows usage.
+- Skip step 2 (Pro/PITR); do the rest of §2 unchanged.
 
 ---
 
@@ -247,5 +256,5 @@ Repeat §2–§6 on a separate Supabase project + Vercel preview environment nam
 
 ## 12. Open release blockers (as of 2026-11-07)
 
-1. **Dependency vulnerabilities (P4.22)**: `pnpm audit --prod` reports critical/high advisories in `next@16.0.1` (incl. an RCE in the React flight protocol fixed in 16.0.7; later fixes up to 16.4.1), `zod@4.1.12` (≥ 4.6.6), and transitive `sharp`/`postcss`. Upgrading changes locked TRD §2 versions and needs owner approval, then a full `pnpm run ci` + `pnpm test:e2e`.
-2. **Performance budget (P4.20)**: exam route ships 209.5 KB gzipped JS vs the 180 KB budget; Lighthouse CI and the 200-VU k6 run need a staging deployment.
+1. **Performance budget (P4.20)**: exam route ships 212 KB gzipped JS vs the 180 KB budget; Lighthouse CI and the 200-VU k6 run need a staging deployment.
+2. **Staging dry run (P4.23)**: §2–§7 have not yet been executed end to end on a staging project.
