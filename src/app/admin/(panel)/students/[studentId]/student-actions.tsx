@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronDown } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from '@/lib/i18n/client';
 import { useState } from 'react';
 import { useAction } from '@/components/admin/use-action';
 import { Button } from '@/components/ui/button';

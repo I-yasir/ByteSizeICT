@@ -1,7 +1,7 @@
 'use client';
 
 import { ArrowUp } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from '@/lib/i18n/client';
 import { cn } from '@/lib/utils';
 import { scrollBehavior, useScrolledPast } from './hooks';
 

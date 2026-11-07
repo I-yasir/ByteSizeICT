@@ -1,7 +1,7 @@
 'use client';
 
 import { Check, Star } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from '@/lib/i18n/client';
 import { type KeyboardEvent, memo } from 'react';
 import { RichText } from '@/components/content/rich-text';
 import { cn } from '@/lib/utils';

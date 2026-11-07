@@ -1,7 +1,7 @@
 'use client';
 
 import { Eye, EyeOff } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from '@/lib/i18n/client';
 import { type InputHTMLAttributes, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { controlClasses } from './field';

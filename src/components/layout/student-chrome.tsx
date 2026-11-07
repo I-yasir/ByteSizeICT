@@ -3,7 +3,7 @@
 import { Bell, ClipboardList, House, LayoutDashboard, Trophy, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from '@/lib/i18n/client';
 import { cn } from '@/lib/utils';
 
 /** docs/02_AppFlow.md §2 (Student) and docs/03_UI_Spec.md §7.21. */

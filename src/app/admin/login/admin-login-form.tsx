@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useLocale, useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from '@/lib/i18n/client';
 import { type FormEvent, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/field';

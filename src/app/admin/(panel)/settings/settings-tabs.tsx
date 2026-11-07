@@ -1,7 +1,7 @@
 'use client';
 
 import { Pencil, Plus, Trash2 } from 'lucide-react';
-import { useLocale, useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from '@/lib/i18n/client';
 import { useState } from 'react';
 import { useAction } from '@/components/admin/use-action';
 import { Badge } from '@/components/ui/badge';

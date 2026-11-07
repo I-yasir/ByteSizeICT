@@ -1,6 +1,5 @@
 import { cva, type VariantProps } from 'class-variance-authority';
-import { Slot } from 'radix-ui';
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { type ButtonHTMLAttributes, cloneElement, isValidElement, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { Spinner } from './spinner';
 
@@ -55,11 +54,15 @@ export function Button({
   ...props
 }: ButtonProps) {
   const classes = cn(buttonVariants({ variant, size, fullWidth }), className);
-  if (asChild) {
-    return (
-      <Slot.Root className={classes} {...props}>
-        {children}
-      </Slot.Root>
+  // asChild without Radix Slot (P4.20): the child (Link / <a>) gets the button classes, props and icon.
+  if (asChild && isValidElement<{ className?: string; children?: ReactNode }>(children)) {
+    return cloneElement(
+      children,
+      { ...props, className: cn(classes, children.props.className) },
+      <>
+        {leadingIcon}
+        {children.props.children}
+      </>,
     );
   }
   return (

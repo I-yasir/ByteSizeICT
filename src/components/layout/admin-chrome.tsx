@@ -3,7 +3,7 @@
 import { FileText, FolderTree, Inbox, LayoutDashboard, Library, LogOut, Menu, ScrollText, Settings, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from '@/lib/i18n/client';
 import { useTransition } from 'react';
 import { adminLogout } from '@/features/auth/actions';
 import { Dialog, DialogTrigger, SheetContent } from '@/components/ui/dialog';

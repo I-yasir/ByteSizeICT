@@ -32,6 +32,8 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // exceljs → unzipper → fstream requires rimraf, which pnpm does not hoist; load exceljs from node_modules.
   serverExternalPackages: ['exceljs'],
+  // Opt-in for bundle analysis (P4.20); never enabled in normal builds.
+  productionBrowserSourceMaps: process.env.ANALYZE_SOURCEMAPS === '1',
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

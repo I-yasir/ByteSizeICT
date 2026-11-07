@@ -2,7 +2,7 @@
 
 import { LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from '@/lib/i18n/client';
 import { type FormEvent, useState, useTransition } from 'react';
 import { LanguageToggle, ThemeToggle } from '@/components/layout/toggles';
 import { Button } from '@/components/ui/button';

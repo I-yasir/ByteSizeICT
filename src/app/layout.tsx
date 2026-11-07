@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import { Hind_Siliguri, Inter } from 'next/font/google';
-import { NextIntlClientProvider } from 'next-intl';
-import { getLocale, getTranslations } from 'next-intl/server';
+import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { ThemeProvider } from '@/components/providers/theme-provider';
+import type { Locale } from '@/lib/i18n/config';
+import { I18nProvider } from '@/lib/i18n/client';
 import './globals.css';
 
 const hind = Hind_Siliguri({
@@ -40,8 +41,8 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  const locale = await getLocale();
-  const t = await getTranslations('common');
+  const locale = (await getLocale()) as Locale;
+  const [t, messages] = await Promise.all([getTranslations('common'), getMessages()]);
 
   return (
     <html lang={locale} className={`${hind.variable} ${inter.variable}`} suppressHydrationWarning>
@@ -52,12 +53,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         >
           {t('skipToContent')}
         </a>
-        <NextIntlClientProvider>
+        <I18nProvider locale={locale} messages={messages}>
           <ThemeProvider>
             {/* Toaster and Analytics live in the group layouts that need them, keeping both off the exam route (P4.20). */}
             {children}
           </ThemeProvider>
-        </NextIntlClientProvider>
+        </I18nProvider>
       </body>
     </html>
   );

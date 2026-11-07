@@ -1,6 +1,5 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { NextIntlClientProvider } from 'next-intl';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import messages from '../../messages/en.json';
@@ -11,11 +10,13 @@ import { Countdown } from '@/components/ui/countdown';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Field, Input } from '@/components/ui/field';
 import { countdownSegments, formatDate, formatTaka } from '@/lib/format';
+import { I18nProvider } from '@/lib/i18n/client';
 
 const pathname = vi.hoisted(() => ({ value: '/dashboard' }));
 vi.mock('next/navigation', () => ({ usePathname: () => pathname.value, useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }) }));
 
-const wrap = (ui: ReactNode) => render(<NextIntlClientProvider locale="en" messages={messages} timeZone="Asia/Dhaka">{ui}</NextIntlClientProvider>);
+// en.json has the same shape as bn.json (check:i18n); the provider's type is derived from bn.json.
+const wrap = (ui: ReactNode) => render(<I18nProvider locale="en" messages={messages as never}>{ui}</I18nProvider>);
 
 describe('Button', () => {
   it('loading disables the button, marks it busy and shows a spinner', async () => {

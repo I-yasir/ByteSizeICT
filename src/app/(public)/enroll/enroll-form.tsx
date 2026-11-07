@@ -3,7 +3,7 @@
 import { track } from '@vercel/analytics';
 import { MessageCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useLocale, useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from '@/lib/i18n/client';
 import { type FormEvent, useMemo, useState } from 'react';
 import { METHOD_LABEL, PaymentMethodBadge } from '@/components/marketing/payment-method-badge';
 import { Button } from '@/components/ui/button';

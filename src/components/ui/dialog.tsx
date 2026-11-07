@@ -1,7 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from '@/lib/i18n/client';
 import { Dialog as D } from 'radix-ui';
 import type { ComponentProps, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
@@ -64,21 +64,8 @@ export function DialogContent({
   );
 }
 
-/** Action row: stacked full-width on mobile (primary last), right-aligned on ≥ 640 px. */
-/** On phones the actions stick to the bottom of the sheet, so the primary action is reachable in long forms. */
-export function DialogActions({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <div
-      className={cn(
-        'sticky bottom-0 -mx-6 mt-6 flex flex-col-reverse gap-3 border-t border-border bg-surface px-6 py-4',
-        'sm:static sm:mx-0 sm:flex-row sm:justify-end sm:border-0 sm:bg-transparent sm:p-0',
-        className,
-      )}
-    >
-      {children}
-    </div>
-  );
-}
+// Kept in its own module so Radix-free dialogs (native-dialog.tsx) can share it.
+export { DialogActions } from './dialog-actions';
 
 /** Side drawer / bottom sheet (mobile menu, admin drawer, question navigator). */
 export function SheetContent({

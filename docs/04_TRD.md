@@ -62,7 +62,7 @@ Install with **exact** versions (`pnpm add -E`). Security upgrade 2026-11-07 (P4
 | `tailwindcss`, `@tailwindcss/postcss` | **4.1.16** | CSS-first config in `globals.css` (`@theme`); no `tailwind.config.js` |
 | `@supabase/supabase-js` | **2.76.1** | Server-only DB client (no `@supabase/ssr`: no Supabase Auth) |
 | `zod` | **4.6.7** | All input validation (shared client/server schemas) |
-| `next-intl` | **4.4.0** | i18n without routing (cookie locale) |
+| `next-intl` | **4.4.0** | i18n without routing (cookie locale) on the server (`next-intl/server`) + message key types; client components use `src/lib/i18n/client.tsx` (P4.20) |
 | `next-themes` | **0.4.6** | Light/Dark/System |
 | `@node-rs/argon2` | **2.0.2** | argon2id hashing for PINs and admin passwords |
 | `resend` | **6.1.2** | Transactional email |
@@ -172,7 +172,7 @@ ByteSizeICT/
 │   │       ├── internal/outbox/drain/route.ts              # POST (x-cron-secret)
 │   │       └── internal/dev-mailbox/route.ts               # GET (x-cron-secret; 404 when email is configured or on production) — E2E only
 │   ├── components/
-│   │   ├── ui/                   # primitives (03_UI_Spec §7)
+│   │   ├── ui/                   # primitives (03_UI_Spec §7); native-dialog.tsx = Radix-free dialog for the exam route
 │   │   ├── layout/               # headers, bottom nav, sidebar, sticky bars
 │   │   ├── content/rich-text.tsx # KaTeX + code renderer (single source)
 │   │   ├── exam/                 # exam page client islands + useExamSession, sync queue
@@ -208,7 +208,7 @@ ByteSizeICT/
 │   │   ├── sheets/client.ts      # Sheets REST (append, find row by mobile, update row)
 │   │   ├── outbox/{enqueue.ts,drain.ts,handlers.ts}
 │   │   ├── content/render.ts     # server-side rich text → sanitised HTML (KaTeX renderToString)
-│   │   ├── i18n/{request.ts,config.ts}
+│   │   ├── i18n/{request.ts,config.ts,client.tsx}   # client.tsx: in-house client translator (P4.20)
 │   │   ├── errors.ts             # isomorphic: ErrorCode, ActionResult envelope, ok()/fail()
 │   │   ├── http.ts               # server-only: re-exports errors.ts + mapDbError, failFromZod, origin check, request IP
 │   │   ├── actions.ts            # server-only: adminAction/studentAction/run, ServiceError, unwrap/unwrapMaybe/check, SQL_NULL

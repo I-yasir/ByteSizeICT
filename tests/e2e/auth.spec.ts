@@ -2,7 +2,7 @@ import { randomInt } from 'node:crypto';
 import type { Page } from '@playwright/test';
 import { randomMobile, testDb } from '../helpers/db';
 import { trackMobile, trackStudent } from '../helpers/fixtures';
-import { createStudent, expect, loginAdmin, loginStudent, msg, pinFromMailbox, SEED_PIN, test } from '../helpers/e2e';
+import { BASE_URL, createStudent, expect, loginAdmin, loginStudent, msg, pinFromMailbox, SEED_PIN, test } from '../helpers/e2e';
 
 async function fillLogin(page: Page, mobile: string, pin: string) {
   await page.getByLabel(msg('login.mobile')).fill(mobile);
@@ -111,7 +111,7 @@ test.describe('P4.04 login security', () => {
       await page.context().clearCookies();
       await page.goto(`/login?next=${encodeURIComponent(next)}`);
       await fillLogin(page, student.mobile, SEED_PIN);
-      await expect(page).toHaveURL(/localhost:3100\/dashboard$/);
+      await expect(page).toHaveURL(`${BASE_URL}/dashboard`);
     }
   });
 

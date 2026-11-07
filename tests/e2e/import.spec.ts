@@ -1,7 +1,7 @@
 import { randomInt } from 'node:crypto';
 import type { Page } from '@playwright/test';
 import { testDb } from '../helpers/db';
-import { trackQuestion } from '../helpers/fixtures';
+import { makeQuestionBank, trackQuestion } from '../helpers/fixtures';
 import { expect, loginAdmin, msg, test } from '../helpers/e2e';
 
 /** P4.18 bulk-import edge cases through the wizard (docs/02_AppFlow.md §6.7, PRD A-08). */
@@ -34,8 +34,10 @@ test.describe('P4.18 import edge cases @desktop', () => {
   test('duplicates in the file and against the bank are skipped; Bangla + LaTeX round-trips; optional columns may be empty', async ({ page }) => {
     const token = `IMP${randomInt(1e9)}`;
     const bangla = `${token} বাইনারি $(1011)_2$ এর দশমিক মান কত? \`x+1\``;
-    const existing = (await testDb.from('questions').select('stem, option_a, option_b, option_c, option_d').eq('status', 'active').limit(1).single()).data;
-    const dbDuplicate = existing ? [ 'ict', '3', '', existing.stem, existing.option_a, existing.option_b, existing.option_c, existing.option_d, 'A', '', '', '', '', '', ''].map(csvCell).join(',') : '';
+    // Self-contained "already in the bank" duplicate, so the spec also runs on an empty production DB.
+    const existing = (await makeQuestionBank(1)).questions[0];
+    const stored = (await testDb.from('questions').select('stem, option_a, option_b, option_c, option_d').eq('id', existing?.id ?? '').single()).data;
+    const dbDuplicate = ['ict', '3', '', stored?.stem ?? '', stored?.option_a ?? '', stored?.option_b ?? '', stored?.option_c ?? '', stored?.option_d ?? '', 'A', '', '', '', '', '', ''].map(csvCell).join(',');
     const lines = [
       HEADER,
       row(bangla, { explanation: `${token} ব্যাখ্যা $$2^3$$`, tags: `${token.toLowerCase()}|math` }),
@@ -43,7 +45,7 @@ test.describe('P4.18 import edge cases @desktop', () => {
       row(`${token} empty optionals`), // duplicate within the file
       dbDuplicate,
       row(`${token} bad answer`, { correct: 'E' }),
-    ].filter(Boolean);
+    ];
     await upload(page, 'mixed.csv', lines.join('\n'));
 
     const counts = page.locator('section, div').filter({ hasText: msg('admin.import.step2') }).first();

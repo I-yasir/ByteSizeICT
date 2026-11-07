@@ -1,7 +1,7 @@
 'use client';
 
 import { type ColumnDef, flexRender, getCoreRowModel, type RowSelectionState, useReactTable } from '@tanstack/react-table';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from '@/lib/i18n/client';
 import { type ReactNode, useState } from 'react';
 import { cn } from '@/lib/utils';
 

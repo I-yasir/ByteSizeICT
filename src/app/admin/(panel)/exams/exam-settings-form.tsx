@@ -2,7 +2,7 @@
 
 import { Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from '@/lib/i18n/client';
 import { type FormEvent, useState } from 'react';
 import { useAction } from '@/components/admin/use-action';
 import { Button } from '@/components/ui/button';

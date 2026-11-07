@@ -3,7 +3,7 @@
 import { Eye, ImagePlus, Plus, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from '@/lib/i18n/client';
 import { useEffect, useMemo, useState } from 'react';
 import { useAction } from '@/components/admin/use-action';
 import { RichText } from '@/components/content/rich-text';

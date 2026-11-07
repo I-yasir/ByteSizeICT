@@ -2,7 +2,7 @@
 
 import { Languages, Monitor, Moon, Sun } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useLocale, useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from '@/lib/i18n/client';
 import { useTheme } from 'next-themes';
 import { useSyncExternalStore, useTransition } from 'react';
 import { setLocale } from '@/features/preferences/actions';

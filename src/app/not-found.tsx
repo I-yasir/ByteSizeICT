@@ -1,4 +1,4 @@
-import { NotFoundView } from '@/components/layout/boundaries';
+import { NotFoundView } from '@/components/layout/not-found-view';
 
 export default function NotFound() {
   return (

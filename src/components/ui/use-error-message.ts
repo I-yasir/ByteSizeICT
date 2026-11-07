@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useTranslations } from '@/lib/i18n/client';
 import { useCallback } from 'react';
 import type { ActionError } from '@/lib/errors';
 

@@ -2,7 +2,7 @@
 
 import { Inbox } from 'lucide-react';
 import Link from 'next/link';
-import { useLocale, useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from '@/lib/i18n/client';
 import { useEffect, useState } from 'react';
 import { type Column, DataTable } from '@/components/admin/data-table';
 import { useAction } from '@/components/admin/use-action';

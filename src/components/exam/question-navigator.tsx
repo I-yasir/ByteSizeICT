@@ -1,9 +1,9 @@
 'use client';
 
 import { LayoutGrid, Star } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from '@/lib/i18n/client';
 import { useState } from 'react';
-import { Dialog, DialogTrigger, SheetContent } from '@/components/ui/dialog';
+import { NativeDialog } from '@/components/ui/native-dialog';
 import { useIsDesktop } from '@/components/ui/hooks';
 import { cn } from '@/lib/utils';
 
@@ -35,7 +35,9 @@ export function QuestionNavigator({
   const t = useTranslations('examPage');
   const desktop = useIsDesktop();
   const [open, setOpen] = useState(false);
-  const review = items.some((i) => i.state === 'correct' || i.state === 'incorrect' || i.state === 'skipped');
+  const review = items.some(
+    (i) => i.state === 'correct' || i.state === 'incorrect' || i.state === 'skipped',
+  );
   const counts = items.reduce<Record<string, number>>((acc, item) => {
     acc[item.state] = (acc[item.state] ?? 0) + 1;
     if (item.marked) acc.marked = (acc.marked ?? 0) + 1;
@@ -46,8 +48,11 @@ export function QuestionNavigator({
     : (['answered', 'unanswered'] as const);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-haspopup="dialog"
         aria-label={t('navigator')}
         className={cn(
           'fixed right-4 z-fab flex size-14 items-center justify-center rounded-full bg-primary text-on-primary shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring lg:right-6 lg:bottom-6',
@@ -56,10 +61,17 @@ export function QuestionNavigator({
       >
         <LayoutGrid aria-hidden className="size-6" />
         {badge ? (
-          <span className="absolute -top-1 -right-1 min-w-6 rounded-full bg-danger px-1.5 font-num text-xs leading-6 font-semibold text-fg-inverse">{badge}</span>
+          <span className="absolute -top-1 -right-1 min-w-6 rounded-full bg-danger px-1.5 font-num text-xs leading-6 font-semibold text-fg-inverse">
+            {badge}
+          </span>
         ) : null}
-      </DialogTrigger>
-      <SheetContent side={desktop ? 'right' : 'bottom'} title={t('navigator')}>
+      </button>
+      <NativeDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        side={desktop ? 'right' : 'bottom'}
+        title={t('navigator')}
+      >
         <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-fg-muted">
           {legend.map((state) => (
             <span key={state} className="inline-flex items-center gap-1.5">
@@ -93,12 +105,17 @@ export function QuestionNavigator({
                 )}
               >
                 {item.n}
-                {item.marked ? <Star aria-hidden className="absolute -top-1 -right-1 size-3 fill-warning text-warning" /> : null}
+                {item.marked ? (
+                  <Star
+                    aria-hidden
+                    className="absolute -top-1 -right-1 size-3 fill-warning text-warning"
+                  />
+                ) : null}
               </button>
             </li>
           ))}
         </ol>
-      </SheetContent>
-    </Dialog>
+      </NativeDialog>
+    </>
   );
 }

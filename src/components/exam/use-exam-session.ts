@@ -1,6 +1,5 @@
 'use client';
 
-import { track } from '@vercel/analytics';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AnswerChange, OptionKey } from '@/types/domain';
@@ -191,7 +190,8 @@ export function useExamSession(config: SessionConfig) {
           if (!body.ok) throw new Error('score failed');
           sessionStorage.setItem(SAMPLE_RESULT_KEY, JSON.stringify(body.data));
           clearLocal(config.storageKey);
-          track('sample_complete');
+          // Loaded on demand: only the sample exam reports to analytics (keeps it off live exams, P4.20).
+          void import('@vercel/analytics').then(({ track }) => track('sample_complete'));
           setPhase('done');
           router.push('/sample/result');
         } catch {

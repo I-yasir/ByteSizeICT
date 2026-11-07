@@ -3,7 +3,7 @@
 import { Menu, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from '@/lib/i18n/client';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger, SheetContent } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';

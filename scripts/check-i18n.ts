@@ -48,9 +48,18 @@ for (const locale of LOCALES) {
   }
 }
 
-// Bangla must not use ICU `#`: next-intl formats it with Bengali digits (UI Spec §8 requires Latin).
+// Bangla must not use ICU `#` (keeps digits explicit and Latin, UI Spec §8).
 for (const [key, value] of catalogs.bn) {
   if (value.includes('#')) problems.push(`"#" in bn.json (renders Bengali digits; use {n}): ${key}`);
+}
+
+// The client formatter (src/lib/i18n/client.tsx) supports only `{name}` and `{n, plural, …}`.
+for (const locale of LOCALES) {
+  for (const [key, value] of catalogs[locale]) {
+    if (/\{\s*\w+\s*,\s*(?!plural\b)\w+/.test(value) || /<\/?[A-Za-z]/.test(value)) {
+      problems.push(`unsupported ICU/rich syntax in ${locale}.json (only {name} and plural): ${key}`);
+    }
+  }
 }
 
 for (const [key, bnValue] of catalogs.bn) {

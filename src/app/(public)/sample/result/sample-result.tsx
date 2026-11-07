@@ -3,7 +3,7 @@
 import { track } from '@vercel/analytics';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useLocale, useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from '@/lib/i18n/client';
 import { useEffect, useSyncExternalStore } from 'react';
 import { SAMPLE_RESULT_KEY } from '@/components/exam/use-exam-session';
 import { AnalysisCards, MarksRing, SummaryCard } from '@/components/review/result-summary';

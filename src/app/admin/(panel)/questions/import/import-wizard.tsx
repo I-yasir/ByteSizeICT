@@ -2,7 +2,7 @@
 
 import { CircleCheck, Download, FileSpreadsheet, Upload } from 'lucide-react';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from '@/lib/i18n/client';
 import { type DragEvent, useState } from 'react';
 import { useAction } from '@/components/admin/use-action';
 import { Button } from '@/components/ui/button';

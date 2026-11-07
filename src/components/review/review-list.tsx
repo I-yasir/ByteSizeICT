@@ -1,7 +1,7 @@
 'use client';
 
 import { Check, Lightbulb, X } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from '@/lib/i18n/client';
 import { useMemo, useState } from 'react';
 import { RichText } from '@/components/content/rich-text';
 import { QuestionImage } from '@/components/exam/question-card';

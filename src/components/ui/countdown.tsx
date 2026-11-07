@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useTranslations } from '@/lib/i18n/client';
 import { useEffect, useRef, useState } from 'react';
 import { countdownSegments } from '@/lib/format';
 import { cn } from '@/lib/utils';

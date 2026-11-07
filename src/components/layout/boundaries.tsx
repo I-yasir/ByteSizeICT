@@ -1,13 +1,15 @@
 'use client';
 
-import { CircleAlert, SearchX } from 'lucide-react';
-import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { CircleAlert } from 'lucide-react';
+import { useTranslations } from '@/lib/i18n/client';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { EmptyState, Skeleton } from '@/components/ui/misc';
 
-/** docs/02_AppFlow.md §7.2 — friendly message, Retry, Go home; never a stack trace. */
+/**
+ * docs/02_AppFlow.md §7.2 — friendly message, Retry, Go home; never a stack trace. Plain <a> links:
+ * a full reload is the right recovery after an error, and next/link stays off the exam route (P4.20).
+ */
 export function ErrorView({ error, reset, homeHref = '/' }: { error: Error & { digest?: string }; reset: () => void; homeHref?: string }) {
   const t = useTranslations('errorPage');
   useEffect(() => {
@@ -27,29 +29,7 @@ export function ErrorView({ error, reset, homeHref = '/' }: { error: Error & { d
         <div className="flex flex-wrap justify-center gap-3">
           <Button onClick={reset}>{t('retry')}</Button>
           <Button asChild variant="secondary">
-            <Link href={homeHref}>{t('home')}</Link>
-          </Button>
-        </div>
-      }
-      className="py-20"
-    />
-  );
-}
-
-export function NotFoundView() {
-  const t = useTranslations('notFound');
-  return (
-    <EmptyState
-      icon={<SearchX />}
-      title={t('title')}
-      description={t('body')}
-      action={
-        <div className="flex flex-wrap justify-center gap-3">
-          <Button asChild>
-            <Link href="/">{t('home')}</Link>
-          </Button>
-          <Button asChild variant="secondary">
-            <Link href="/dashboard">{t('dashboard')}</Link>
+            <a href={homeHref}>{t('home')}</a>
           </Button>
         </div>
       }

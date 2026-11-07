@@ -4,7 +4,7 @@ import { closestCenter, DndContext, type DragEndEvent, KeyboardSensor, PointerSe
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { ArrowDown, ArrowUp, CircleCheck, CircleX, GripVertical, Plus, Search, Star, X } from 'lucide-react';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from '@/lib/i18n/client';
 import { useEffect, useState } from 'react';
 import { useAction } from '@/components/admin/use-action';
 import { RichText } from '@/components/content/rich-text';
