@@ -16,6 +16,7 @@ test-results/
 blob-report/
 
 # env (only the example is committed; covers .env, .env.local, .env.production, .env*.local …)
+.env
 .env*
 !.env.example
 

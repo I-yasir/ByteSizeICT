@@ -72,9 +72,23 @@ export function jsonResult<T>(result: ActionResult<T>): Response {
 const LOCAL_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 
 /** Mutating Route Handlers must be same-origin (TRD §6.4). */
+/** Mutating Route Handlers must be same-origin (TRD §6.4). */
 export function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;
-  if (origin === env.NEXT_PUBLIC_SITE_URL) return true;
+  
+  try {
+    const originHost = new URL(origin).host;
+    const allowedHost = new URL(env.NEXT_PUBLIC_SITE_URL).host;
+    
+    // Allow exact match or apex/www interchangeability
+    if (originHost === allowedHost || originHost === `www.${allowedHost}` || `www.${originHost}` === allowedHost) {
+      return true;
+    }
+  } catch {
+    // Fallback if URL parsing fails
+    if (origin === env.NEXT_PUBLIC_SITE_URL) return true;
+  }
+
   return env.VERCEL_ENV !== 'production' && LOCAL_ORIGIN.test(origin);
 }
 
