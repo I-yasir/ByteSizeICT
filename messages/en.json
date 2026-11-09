@@ -172,6 +172,7 @@
     "attemptClosed": "Time is over for this exam.",
     "questionDuplicate": "A question with the same text already exists.",
     "questionLockedCorrectOption": "The correct answer can't be changed because this question was used in an exam that students have taken.",
+    "questionInUse": "These questions are in a current or upcoming exam and can't be deleted.",
     "importBadHeaders": "The file's columns don't match the template.",
     "importTooLarge": "The file is too large. Maximum 2,000 rows and 5 MB.",
     "internal": "Something went wrong. Please try again.",
@@ -857,7 +858,19 @@
       },
       "bulkDone": "Updated",
       "emptyFiltered": "No questions match these filters.",
-      "emptyBank": "Your question bank is empty. Add your first question or import a file."
+      "emptyBank": "Your question bank is empty. Add your first question or import a file.",
+      "delete": {
+        "action": "Delete",
+        "title": "Delete {n, plural, one {# question} other {# questions}}?",
+        "body": "Questions used in past exams are hidden but kept for those results and reviews. Questions never used are erased along with their images. This cannot be undone.",
+        "typeToConfirm": "Type {n} to confirm",
+        "confirm": "Delete",
+        "cancel": "Cancel",
+        "done": "Deleted {n, plural, one {# question} other {# questions}}",
+        "inUseTitle": "Can't delete yet",
+        "inUseBody": "Remove these questions from the exams below (or archive the exams) first.",
+        "close": "Close"
+      }
     },
     "editor": {
       "newTitle": "New question",
@@ -896,7 +909,8 @@
       "saveAnyway": "Save anyway",
       "imageTooLarge": "Images must be 1 MB or smaller.",
       "imageType": "PNG, JPG or WebP only.",
-      "uploadFailed": "Upload failed."
+      "uploadFailed": "Upload failed.",
+      "delete": "Delete"
     },
     "import": {
       "title": "Import questions",

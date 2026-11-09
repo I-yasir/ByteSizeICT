@@ -122,6 +122,69 @@ describe('questions (P2.12–P2.13)', () => {
   });
 });
 
+describe('question deletion (R1.1 V2.10–V2.11, D3)', () => {
+  const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const stored = async (path: string) => {
+    const [folder, name] = path.split('/');
+    const { data } = await testDb.storage.from('question-media').list(folder, { search: name });
+    return (data ?? []).some((file) => file.name === name);
+  };
+
+  it('never used → hard delete removes the row and its Storage image', async () => {
+    const path = `questions/${crypto.randomUUID()}.png`;
+    expect((await testDb.storage.from('question-media').upload(path, PNG, { contentType: 'image/png' })).error).toBeNull();
+    const q = ok(await questionActions.createQuestion({ question: question({ stemImagePath: path }) }));
+    trackQuestion(q.id);
+    expect(await stored(path)).toBe(true);
+
+    expect(ok(await questionActions.deleteQuestions({ ids: [q.id] }))).toEqual({ hard: 1, soft: 0 });
+    expect((await testDb.from('questions').select('id').eq('id', q.id)).data).toEqual([]);
+    expect(await stored(path)).toBe(false);
+    const audit = await testDb.from('audit_log').select('meta').eq('action', 'question.delete').eq('entity_id', q.id).single();
+    expect(audit.data?.meta).toMatchObject({ mode: 'hard' });
+  });
+
+  it('in a draft exam → QUESTION_IN_USE lists the exam and deletes nothing', async () => {
+    const free = ok(await questionActions.createQuestion({ question: question() }));
+    const used = ok(await questionActions.createQuestion({ question: question() }));
+    trackQuestion(free.id);
+    trackQuestion(used.id);
+    const examId = await makeExam({ questionIds: [used.id], status: 'draft' });
+
+    const result = await questionActions.deleteQuestions({ ids: [free.id, used.id] });
+    expect(result).toMatchObject({ ok: false, error: { code: 'QUESTION_IN_USE', message: 'errors.questionInUse' } });
+    if (result.ok) throw new Error('expected failure');
+    expect(result.error.meta?.exams).toEqual([{ id: examId, title: expect.any(String), phase: 'draft' }]);
+    expect(await getQuestionForEdit(free.id)).not.toBeNull();
+  });
+
+  it('only in a past exam → soft delete: gone from the bank, kept for the exam', async () => {
+    const stem = `Soft delete ${crypto.randomUUID()}`;
+    const q = ok(await questionActions.createQuestion({ question: question({ stem }) }));
+    trackQuestion(q.id);
+    const examId = await makeExam({
+      questionIds: [q.id],
+      startsAt: new Date(Date.now() - 3 * 3_600_000),
+      liveEndsAt: new Date(Date.now() - 2 * 3_600_000),
+    });
+
+    expect(ok(await questionActions.deleteQuestions({ ids: [q.id] }))).toEqual({ hard: 0, soft: 1 });
+    expect(await getQuestionForEdit(q.id)).toBeNull();
+    expect((await searchQuestions({ chapterId: bank.chapterId, status: ['active', 'draft', 'archived'] })).items.map((r) => r.id)).not.toContain(q.id);
+    expect(ok(await questionActions.searchBank({ q: stem })).total).toBe(0);
+    expect(await questionActions.updateQuestion({ id: q.id, question: question({ stem }) })).toMatchObject({ ok: false, error: { code: 'NOT_FOUND' } });
+    expect(await examActions.setExamQuestions({ id: await makeExam({ questionIds: [], status: 'draft' }), questionIds: [q.id] })).toMatchObject({
+      ok: false, error: { code: 'EXAM_INACTIVE_QUESTIONS' },
+    });
+    // The past exam still shows it, and the same text can be added again without a duplicate warning.
+    expect((await getExamForBuilder(examId))?.questions.map((r) => r.id)).toContain(q.id);
+    const again = ok(await questionActions.createQuestion({ question: question({ stem }) }));
+    trackQuestion(again.id);
+    // Deleting it a second time is a no-op.
+    expect(ok(await questionActions.deleteQuestions({ ids: [q.id] }))).toEqual({ hard: 0, soft: 0 });
+  });
+});
+
 describe('bulk import (P2.14, R1.1 V2.07)', () => {
   // The R1 template (15 columns) — still accepted; its five removed columns are ignored (D9).
   const legacyHeader = 'subject,chapter_number,topic,stem,option_a,option_b,option_c,option_d,correct,explanation,difficulty,type,source,board_year,tags';

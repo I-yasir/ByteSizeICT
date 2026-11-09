@@ -5,10 +5,10 @@ import { z } from 'zod';
 import { adminAction } from '@/lib/actions';
 import { commitImport as commit, parseImportFile, previewImport as preview } from './import';
 import {
-  
   commitImportSchema,
   createQuestionSchema,
   mediaUploadSchema,
+  questionIdsSchema,
   setStatusSchema,
   updateQuestionSchema,
 } from './schemas';
@@ -33,6 +33,10 @@ export const duplicateQuestion = adminAction('questions.duplicate', z.object({ i
 
 export const setQuestionStatus = adminAction('questions.status', setStatusSchema, async (input) =>
   refresh(await service.setQuestionStatus(input.ids, input.status)),
+);
+
+export const deleteQuestions = adminAction('questions.delete', questionIdsSchema, async (input, { admin }) =>
+  refresh(await service.deleteQuestions(admin.id, input.ids)),
 );
 
 export const createMediaUploadUrl = adminAction('questions.upload', mediaUploadSchema, async (input) =>

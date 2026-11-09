@@ -42,7 +42,7 @@ export async function upsertTopic(input: z.output<typeof topicSchema>) {
 
 /** Topics are deletable only when no question uses them (FK would silently null them otherwise). */
 export async function deleteTopic(id: string): Promise<{ deleted: true }> {
-  const { count, error } = await supabaseAdmin.from('questions').select('id', { count: 'exact', head: true }).eq('topic_id', id);
+  const { count, error } = await supabaseAdmin.from('questions').select('id', { count: 'exact', head: true }).eq('topic_id', id).is('deleted_at', null);
   check({ error });
   if ((count ?? 0) > 0) throw new ServiceError('VALIDATION', { field: 'topic', meta: { questionCount: count } });
   check(await supabaseAdmin.from('topics').delete().eq('id', id));

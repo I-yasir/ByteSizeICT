@@ -6,20 +6,20 @@
 > **Hard constraint (owner):** everything must work on the **free tiers** of Vercel (Hobby), Supabase, Resend and Google Cloud (§3).
 
 ## Current Step
-`V2.10` — Migration `0015_v2_question_delete.sql` (phase V2-B). **Waiting for the owner's "go".**
+`V2.14` — Migration `0016_v2_import_uploads.sql` (phase V2-C). **Waiting for the owner's "go".**
 
 ## Progress
 | Phase | Steps | Done |
 | --- | --- | --- |
 | V2-0 Decisions, docs, safety | 4 | 4 |
 | V2-A Question model cleanup | 6 | 6 |
-| V2-B Question deletion | 4 | 0 |
+| V2-B Question deletion | 4 | 4 |
 | V2-C Excel import with images | 5 | 0 |
 | V2-D Plan routines (PDF) + plan buttons | 5 | 0 |
 | V2-E Exam audiences by plan | 6 | 0 |
 | V2-F Public site, routine & enrollment flow | 7 | 0 |
 | V2-G Regression & rollout | 4 | 0 |
-| **Total** | **41** | **10** |
+| **Total** | **41** | **14** |
 
 ---
 
@@ -110,14 +110,14 @@ Nothing in V2 may require a paid plan. Design rules that follow:
   Verify: CI output in Done. Done: 2026-11-09 — Verified: `pnpm run ci` exit 0 — lint 0 errors (1 known TanStack warning), typecheck, vitest **253/253** (17 files), pgTAP **108/108**, i18n 918 keys, answer-leak, Playwright **130 passed** (mobile + desktop; exam route JS 166.5 KB < 180 KB), secrets on the fresh build.
 
 ### V2-B Question deletion (CR2)
-- [ ] **V2.10 Migration `0015_v2_question_delete.sql`**: `questions.deleted_at`, `deleted_by`; partial indexes exclude deleted rows; `delete_questions(p_admin, p_ids uuid[])` → `QUESTION_IN_USE` (detail lists exam ids/titles) if any id is in an exam with phase `draft|scheduled|live|late_window`; otherwise soft delete when referenced by any exam or answer, hard delete when unreferenced; one audit row per question (`question.delete`, mode soft/hard); returns hard-deleted image paths. Duplicate-hash checks and `set_exam_questions` ignore/reject deleted questions. pgTAP.
-  Verify: pgTAP: unused → hard; past-only → soft; in upcoming/live/always/draft → error; audit rows; deleted rows invisible to search helpers. Done:
-- [ ] **V2.11 Service/action** `deleteQuestions(ids)`; Storage cleanup of returned paths via the Storage API (logged, best effort); queries exclude `deleted_at is not null` (bank, builder, search, duplicates, admin counts); reviews/results still read them.
-  Verify: integration tests incl. image removal, soft-delete visibility in a past exam's review, auth failure. Done:
-- [ ] **V2.12 UI**: Delete in the editor and bulk Delete in the list (confirm dialog with count; type-to-confirm for bulk); `QUESTION_IN_USE` lists the blocking exams with links.
-  Verify: E2E: delete unused; blocked when in an upcoming exam; a past-exam question disappears from the bank but its review still renders. Done:
-- [ ] **V2.13 Gate B** `pnpm run ci`.
-  Verify: CI output. Done:
+- [x] **V2.10 Migration `0015_v2_question_delete.sql`**: `questions.deleted_at`, `deleted_by`; partial indexes exclude deleted rows; `delete_questions(p_admin, p_ids uuid[])` → `QUESTION_IN_USE` (detail lists exam ids/titles) if any id is in an exam with phase `draft|scheduled|live|late_window`; otherwise soft delete when referenced by any exam or answer, hard delete when unreferenced; one audit row per question (`question.delete`, mode soft/hard); returns hard-deleted image paths. Duplicate-hash checks and `set_exam_questions` ignore/reject deleted questions. pgTAP.
+  Verify: pgTAP: unused → hard; past-only → soft; in upcoming/live/always/draft → error; audit rows; deleted rows invisible to search helpers. Done: 2026-11-09 — Verified: `supabase/migrations/0015_v2_question_delete.sql` adds `deleted_at`/`deleted_by`, `questions_live_idx` + `questions_live_hash_idx` (partial, `deleted_at is null`), `delete_questions` (locks rows; `QUESTION_IN_USE` with JSON detail `[{id,title,phase}]`, nothing changed; soft/hard per question; audit `question.delete` with `{mode}`; returns hard-deleted image paths **minus paths still used by another question**, since duplicates share files) and `set_exam_questions` rejecting deleted ids. `supabase/tests/question_delete.test.sql` (19): draft/scheduled/live/always → error, detail lists only the blocking exams, blocked call changes nothing, closed-with-answers and archived → soft, unused → hard with paths, shared image kept, answers kept, 3 audit rows, `set_exam_questions` → `EXAM_INACTIVE_QUESTIONS`. `db:reset && db:types && db:test` 127/127 PASS.
+- [x] **V2.11 Service/action** `deleteQuestions(ids)`; Storage cleanup of returned paths via the Storage API (logged, best effort); queries exclude `deleted_at is not null` (bank, builder, search, duplicates, admin counts); reviews/results still read them.
+  Verify: integration tests incl. image removal, soft-delete visibility in a past exam's review, auth failure. Done: 2026-11-09 — Verified: `service.deleteQuestions` maps `QUESTION_IN_USE` to `ServiceError` with `meta.exams`, then removes returned paths from `question-media` (errors logged as `questions.delete.storage`, never fail the delete); action `deleteQuestions` (`questionIdsSchema`, 1–500 ids); `QUESTION_IN_USE` added to `ERROR_CODES` + `errors.questionInUse`. `deleted_at is null` filters: `searchQuestions` (bank + builder `searchBank`), `getQuestionForEdit` (editor 404s), duplicate check, import in-bank check, update/duplicate/bulk status, topic-in-use count. Integration (`content-exams.test.ts`, 3 new): hard delete removes the uploaded Storage object + audit `{mode:'hard'}`; draft exam → `QUESTION_IN_USE` with `meta.exams=[{id,title,phase:'draft'}]`; past exam → soft, gone from search/searchBank/editor, update → `NOT_FOUND`, builder of the past exam still lists it, same text re-creatable without a duplicate warning, second delete is a no-op. Auth: `auth-matrix.test.ts` covers the new export (UNAUTHENTICATED). Review rendering is covered by the V2.12 E2E. vitest 257/257.
+- [x] **V2.12 UI**: Delete in the editor and bulk Delete in the list (confirm dialog with count; type-to-confirm for bulk); `QUESTION_IN_USE` lists the blocking exams with links.
+  Verify: E2E: delete unused; blocked when in an upcoming exam; a past-exam question disappears from the bank but its review still renders. Done: 2026-11-09 — Verified: `questions/delete-questions-dialog.tsx` (UI §7.24: initial focus Cancel, `danger` Delete, bulk "Type {n} to confirm" gate; `QUESTION_IN_USE` swaps to the blocking-exam links with phase labels and a single Close, corner X hidden); bulk Delete in the list selection bar (selection reset after delete); Delete in the editor for saved questions (→ `/admin/questions`); 12 bn + en keys. E2E `admin.spec.ts` (3 new, mobile + desktop; bulk one `@desktop`): bulk delete of 2 unused questions (Cancel focused, button disabled until "2"); editor delete blocked by a scheduled exam with the exam link, row untouched; past-exam question soft-deleted via the editor, bank search empty, the student's `/attempts/<id>/result` review still shows the stem and correct answer.
+- [x] **V2.13 Gate B** `pnpm run ci`.
+  Verify: CI output. Done: 2026-11-09 — Verified: `pnpm run ci` exit 0 — lint 0 errors (1 known TanStack warning), typecheck, vitest **257/257** (17 files), pgTAP **127/127** (7 files), i18n 930 keys, answer-leak, Playwright **135 passed** (mobile + desktop; exam route JS 166.5 KB < 180 KB), secrets.
 
 ### V2-C Excel import with images (CR3; after V2-A)
 - [ ] **V2.14 Migration `0016_v2_import_uploads.sql`**: private bucket `import-uploads` (≤ 20 MB; xlsx/csv/json); `question-media` staging prefix `staging/<batch>/`; `question_import_batches` gains `images jsonb`, `staged_paths text[]`; RLS/pgTAP.
@@ -216,3 +216,6 @@ Production gets the whole history (0001–0019) at V2.38 on a reset, empty datab
 | 2026-11-09 | V2.04 | Migration 0014 also drops and re-creates the `questions_updated_at` trigger. | Its column list (0004) referenced the dropped columns, which blocks `drop column` (2BP01). | Schema §5 |
 | 2026-11-09 | V2.07 | Legacy import columns are stripped in `parseImportFile` and reported as `ImportPreview.ignoredColumns`; the wizard shows them in an `info` banner. | D9; UI Spec §7.13 has no warning banner variant (offline/info/danger). | AppFlow §6.7 |
 | 2026-11-09 | V2.04 | Local dev: the 5 service-version files written by `supabase link` were moved to `supabase/.temp/_linked-versions/`; the local Docker volumes were recreated (dev data only). | The mixed versions made Storage crash on a fresh volume (`Migration lifecycle-writer-coordination not found`); the old DB volume had lost its config directory. | RUNBOOK §2 |
+| 2026-11-09 | V2.10 | `delete_questions` returns only image paths no remaining question references. | `duplicateQuestion` copies image paths, so erasing a hard-deleted question's files could break its duplicate. | — (Schema §8.7 contract unchanged) |
+| 2026-11-09 | V2.11 | Updating, duplicating, re-statusing or topic-counting a deleted question treats it as absent (`NOT_FOUND` / skipped). | Consistent with "hidden everywhere in the admin bank" (AppFlow §6.5); prevents edits to rows that only past exams reference. | — |
+| 2026-11-09 | V2.12 | The in-use dialog hides the corner close button. | UI §7.24 "only a Close button"; two identically labelled buttons were also ambiguous to assistive tech. | — |

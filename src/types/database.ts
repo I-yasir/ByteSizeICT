@@ -746,6 +746,8 @@ export type Database = {
           correct_rate: number | null
           created_at: string
           created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           explanation: string | null
           explanation_image_path: string | null
           id: string
@@ -774,6 +776,8 @@ export type Database = {
           correct_rate?: number | null
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           explanation?: string | null
           explanation_image_path?: string | null
           id?: string
@@ -802,6 +806,8 @@ export type Database = {
           correct_rate?: number | null
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           explanation?: string | null
           explanation_image_path?: string | null
           id?: string
@@ -834,6 +840,13 @@ export type Database = {
           {
             foreignKeyName: "questions_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "admins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "questions_deleted_by_fkey"
+            columns: ["deleted_by"]
             isOneToOne: false
             referencedRelation: "admins"
             referencedColumns: ["id"]
@@ -1214,6 +1227,14 @@ export type Database = {
         Returns: {
           hash: string
           idx: number
+        }[]
+      }
+      delete_questions: {
+        Args: { p_admin: string; p_ids: string[] }
+        Returns: {
+          image_paths: string[]
+          mode: string
+          question_id: string
         }[]
       }
       enforce_session_limit: {

@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, Library, Pencil } from 'lucide-react';
+import { Copy, Library, Pencil, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from '@/lib/i18n/client';
@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/ui/misc';
 import { duplicateQuestion, setQuestionStatus } from '@/features/questions/actions';
 import type { searchQuestions } from '@/features/questions/queries';
 import { formatNumber } from '@/lib/format';
+import { DeleteQuestionsDialog } from './delete-questions-dialog';
 
 type Row = Awaited<ReturnType<typeof searchQuestions>>['items'][number];
 const STATUS = { active: 'success', draft: 'neutral', archived: 'warning' } as const;
@@ -25,6 +26,9 @@ export function QuestionsTable({ rows, hasFilters }: { rows: Row[]; hasFilters: 
   const router = useRouter();
   const { run, pending } = useAction();
   const [selected, setSelected] = useState<string[]>([]);
+  const [deleting, setDeleting] = useState(false);
+  // Remounting the table clears its internal selection after a delete.
+  const [tableKey, setTableKey] = useState(0);
 
   const columns: Column<Row>[] = [
     { id: 'stem', header: t('cols.stem'), cell: (r) => <RichText html={r.stemHtml} className="line-clamp-2 max-w-md text-sm" />, className: 'max-w-md' },
@@ -62,9 +66,11 @@ export function QuestionsTable({ rows, hasFilters }: { rows: Row[]; hasFilters: 
           {(['active', 'draft', 'archived'] as const).map((s) => (
             <Button key={s} size="sm" variant="ghost" loading={pending} onClick={() => run(() => setQuestionStatus({ ids: selected, status: s }), { success: t('bulkDone') })}>{t(`setStatus.${s}`)}</Button>
           ))}
+          <Button size="sm" variant="ghost" className="text-danger hover:bg-danger-soft" leadingIcon={<Trash2 aria-hidden className="size-4" />} onClick={() => setDeleting(true)}>{t('delete.action')}</Button>
         </div>
       ) : null}
       <DataTable
+        key={tableKey}
         rows={rows}
         columns={columns}
         getRowId={(r) => r.id}
@@ -73,6 +79,18 @@ export function QuestionsTable({ rows, hasFilters }: { rows: Row[]; hasFilters: 
         onRowClick={(r) => router.push(`/admin/questions/${r.id}`)}
         empty={<EmptyState icon={<Library />} title={hasFilters ? t('emptyFiltered') : t('emptyBank')} />}
       />
+      {deleting ? (
+        <DeleteQuestionsDialog
+          ids={selected}
+          bulk
+          onClose={() => setDeleting(false)}
+          onDeleted={() => {
+            setDeleting(false);
+            setSelected([]);
+            setTableKey((k) => k + 1);
+          }}
+        />
+      ) : null}
     </>
   );
 }

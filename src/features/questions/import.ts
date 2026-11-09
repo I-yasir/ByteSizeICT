@@ -152,7 +152,7 @@ export async function previewImport(adminId: string, { rows: rawRows, ignoredCol
   const existing = new Set<string>();
   for (let i = 0; i < hashes.length; i += 300) {
     const chunk = hashes.slice(i, i + 300);
-    const rows = unwrap(await supabaseAdmin.from('questions').select('content_hash').in('content_hash', chunk));
+    const rows = unwrap(await supabaseAdmin.from('questions').select('content_hash').in('content_hash', chunk).is('deleted_at', null));
     for (const row of rows) existing.add(row.content_hash);
   }
 

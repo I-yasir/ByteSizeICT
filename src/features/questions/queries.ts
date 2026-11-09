@@ -19,7 +19,7 @@ export async function searchQuestions(search: QuestionSearch = {}) {
     if (chapterIds.length === 0) return empty;
   }
 
-  let query = supabaseAdmin.from('questions').select(LIST_COLUMNS, { count: 'exact' }).in('status', s.status);
+  let query = supabaseAdmin.from('questions').select(LIST_COLUMNS, { count: 'exact' }).in('status', s.status).is('deleted_at', null);
   if (chapterIds) query = query.in('chapter_id', chapterIds);
   if (s.chapterId) query = query.eq('chapter_id', s.chapterId);
   if (s.topicId) query = query.eq('topic_id', s.topicId);
@@ -47,10 +47,10 @@ export async function searchQuestions(search: QuestionSearch = {}) {
   } satisfies Paged<unknown>;
 }
 
-/** Full record for the editor (admin only). */
+/** Full record for the editor (admin only); deleted questions are gone from the bank. */
 export async function getQuestionForEdit(id: string) {
   const row = unwrapMaybe(
-    await supabaseAdmin.from('questions').select('*, chapter:chapters(subject_id)').eq('id', id).maybeSingle(),
+    await supabaseAdmin.from('questions').select('*, chapter:chapters(subject_id)').eq('id', id).is('deleted_at', null).maybeSingle(),
   );
   return row ?? null;
 }

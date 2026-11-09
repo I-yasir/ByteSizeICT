@@ -39,7 +39,7 @@ export async function contentHashes(items: { stem: string; a: string; b: string;
 
 async function findDuplicate(q: QuestionInput, excludeId?: string): Promise<string | null> {
   const [hash] = await contentHashes([{ stem: q.stem, a: q.optionA, b: q.optionB, c: q.optionC, d: q.optionD }]);
-  let query = supabaseAdmin.from('questions').select('id').eq('content_hash', hash as string).limit(1);
+  let query = supabaseAdmin.from('questions').select('id').eq('content_hash', hash as string).is('deleted_at', null).limit(1);
   if (excludeId) query = query.neq('id', excludeId);
   const rows = unwrap(await query);
   return rows[0]?.id ?? null;
@@ -70,17 +70,19 @@ export async function updateQuestion(adminId: string, id: string, q: QuestionInp
     if (duplicateId) throw new ServiceError('QUESTION_DUPLICATE', { meta: { duplicateId } });
   }
   // The DB trigger raises QUESTION_LOCKED_CORRECT_OPTION if the answer key changes after use.
-  const updated = unwrap(await supabaseAdmin.from('questions').update(toRow(q, adminId)).eq('id', id).select('id'));
+  const updated = unwrap(
+    await supabaseAdmin.from('questions').update(toRow(q, adminId)).eq('id', id).is('deleted_at', null).select('id'),
+  );
   if (updated.length === 0) throw new ServiceError('NOT_FOUND');
   return { id };
 }
 
 export async function duplicateQuestion(adminId: string, id: string): Promise<{ id: string }> {
-  const source = unwrap(await supabaseAdmin.from('questions').select('*').eq('id', id).maybeSingle());
+  const source = unwrap(await supabaseAdmin.from('questions').select('*').eq('id', id).is('deleted_at', null).maybeSingle());
   if (!source) throw new ServiceError('NOT_FOUND');
   const {
     id: _id, content_hash: _hash, created_at: _c, updated_at: _u, times_used: _tu, times_answered: _ta,
-    times_correct: _tc, correct_rate: _cr, ...copy
+    times_correct: _tc, correct_rate: _cr, deleted_at: _da, deleted_by: _db, ...copy
   } = source;
   const created = unwrap(
     await supabaseAdmin
@@ -93,8 +95,52 @@ export async function duplicateQuestion(adminId: string, id: string): Promise<{ 
 }
 
 export async function setQuestionStatus(ids: string[], status: 'draft' | 'active' | 'archived'): Promise<{ updated: number }> {
-  const rows = unwrap(await supabaseAdmin.from('questions').update({ status }).in('id', ids).select('id'));
+  const rows = unwrap(
+    await supabaseAdmin.from('questions').update({ status }).in('id', ids).is('deleted_at', null).select('id'),
+  );
   return { updated: rows.length };
+}
+
+export type BlockingExam = { id: string; title: string; phase: string };
+
+function parseBlockingExams(details: unknown): BlockingExam[] {
+  try {
+    const parsed: unknown = typeof details === 'string' ? JSON.parse(details) : null;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((item: unknown) => {
+      if (typeof item !== 'object' || item === null) return [];
+      const { id, title, phase } = item as Record<string, unknown>;
+      return typeof id === 'string' && typeof title === 'string' && typeof phase === 'string' ? [{ id, title, phase }] : [];
+    });
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Deletes questions under D3 (docs/02_AppFlow.md §6.5): blocked by any current/upcoming exam,
+ * soft when past exams or answers reference them, hard otherwise. Image files of hard-deleted
+ * questions are removed afterwards on a best-effort basis: an orphaned file only costs storage.
+ */
+export async function deleteQuestions(adminId: string, ids: string[]): Promise<{ hard: number; soft: number }> {
+  const result = await supabaseAdmin.rpc('delete_questions', { p_admin: adminId, p_ids: ids });
+  if (result.error?.message === 'QUESTION_IN_USE') {
+    throw new ServiceError('QUESTION_IN_USE', { meta: { exams: parseBlockingExams(result.error.details) } });
+  }
+  const rows = unwrap(result);
+  const paths = rows.flatMap((row) => row.image_paths ?? []);
+  if (paths.length > 0) {
+    try {
+      const { error } = await supabaseAdmin.storage.from(QUESTION_MEDIA_BUCKET).remove(paths);
+      if (error) throw error;
+    } catch (error) {
+      console.error(JSON.stringify({ level: 'warn', context: 'questions.delete.storage', paths, error: String((error as Error)?.message ?? error) }));
+    }
+  }
+  return {
+    hard: rows.filter((row) => row.mode === 'hard').length,
+    soft: rows.filter((row) => row.mode === 'soft').length,
+  };
 }
 
 /** Signed upload URL for an admin image upload (≤ 1 MB, png/jpeg/webp enforced by the bucket). */

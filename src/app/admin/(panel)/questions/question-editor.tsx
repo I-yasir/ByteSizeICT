@@ -1,6 +1,6 @@
 'use client';
 
-import { Eye, ImagePlus, Plus, X } from 'lucide-react';
+import { Eye, ImagePlus, Plus, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from '@/lib/i18n/client';
@@ -18,6 +18,7 @@ import { createMediaUploadUrl, createQuestion, previewQuestion, updateQuestion }
 import { upsertTopic } from '@/features/taxonomy/actions';
 import type { Taxonomy } from '@/features/taxonomy/queries';
 import { cn } from '@/lib/utils';
+import { DeleteQuestionsDialog } from './delete-questions-dialog';
 
 const KEYS = ['A', 'B', 'C', 'D'] as const;
 type Key = (typeof KEYS)[number];
@@ -79,6 +80,7 @@ export function QuestionEditor({ taxonomy, initial, usage }: { taxonomy: Taxonom
   const [showPreview, setShowPreview] = useState(false);
   const [preview, setPreview] = useState<{ stemHtml: string; optionsHtml: string[]; explanationHtml: string; imageUrls: Record<string, string> } | null>(null);
   const [newTopic, setNewTopic] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm((f) => ({ ...f, [key]: value }));
   const imagePaths = [form.stemImagePath, ...KEYS.map((k) => form.optionImages[k]), form.explanationImagePath].filter((p): p is string => Boolean(p));
@@ -271,10 +273,17 @@ export function QuestionEditor({ taxonomy, initial, usage }: { taxonomy: Taxonom
           <Button variant="secondary" loading={pending} onClick={() => save('another')}>{t('saveAnother')}</Button>
           <Button asChild variant="ghost"><Link href="/admin/questions">{t('cancel')}</Link></Button>
           <Button variant="ghost" className="ml-auto lg:hidden" leadingIcon={<Eye aria-hidden className="size-4" />} onClick={() => setShowPreview((v) => !v)}>{t('preview')}</Button>
+          {initial ? (
+            <Button variant="ghost" className="text-danger hover:bg-danger-soft" leadingIcon={<Trash2 aria-hidden className="size-4" />} onClick={() => setDeleting(true)}>{t('delete')}</Button>
+          ) : null}
         </div>
         {showPreview ? <div className="lg:hidden">{previewPanel}</div> : null}
       </div>
       <div className="hidden lg:block"><div className="sticky top-20">{previewPanel}</div></div>
+
+      {deleting && initial ? (
+        <DeleteQuestionsDialog ids={[initial.id]} bulk={false} onClose={() => setDeleting(false)} onDeleted={() => router.push('/admin/questions')} />
+      ) : null}
 
       <Dialog open={duplicateId !== null} onOpenChange={(o) => !o && setDuplicateId(null)}>
         <DialogContent title={t('duplicateTitle')} description={t('duplicateBody')}>
