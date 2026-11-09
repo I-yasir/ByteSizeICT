@@ -248,6 +248,13 @@ Expect `RESTORE OK: <n> tables, <m> rows match the backup.`
 - **Limits:** `.xlsx` or `.csv` (text only), ≤ 2,000 rows, ≤ 20 MB. The browser reads the file and uploads it straight to Storage (progress bar), so large files don't hit the server's request limits. Cancel deletes the uploaded files; abandoned uploads are deleted automatically after 24 h (cron `import-cleanup-kick`).
 - Duplicates (same normalised text as another question or another row) are skipped; invalid rows are listed with row number and column and can be downloaded as a CSV.
 
+## 8b. Admin guide: deleting questions, plan routines, exam audiences (R1.1)
+
+- **Deleting questions** (*Question Bank* → Delete in the editor, or select rows → Delete; bulk asks you to type the count): a question that is in a **draft, scheduled, live or late-window** exam cannot be deleted — the dialog lists those exams (remove it there or archive the exam first). A question used only in past exams, or answered by students, is **hidden** (kept for those results and reviews); a question never used is **erased** with its pictures. Deleting cannot be undone.
+- **Plan routines** (*Settings → Plans*): every new plan needs a **routine PDF** (≤ 5 MB) — upload it in the plan dialog; *Replace PDF* swaps it (the old file is removed). Plans without a PDF show a "No routine PDF" badge; their cards say "Routine coming soon". The PDF appears on the plan cards (homepage, `/routine`, `/enroll`) with *View* and *Download*.
+- **Exam audiences** (*Exam builder → Audience*): *All active students*, or *Students of these plans* (tick one or more; inactive plans are marked). A student belongs to the plan of their latest approved admission/renewal; students without a plan see only exams for all active students. Publishing needs at least one plan when the audience is by plan.
+- **Analytics**: Vercel Web Analytics (free tier) counts page views on the public pages (`/`, `/routine`, `/enroll`, `/faq`, `/login`, `/privacy`). Enable it in Vercel → project → *Analytics*; no code or environment change is needed (enabled 2026-11-09).
+
 ---
 
 ## 9. Operations checklist
@@ -327,10 +334,9 @@ Not covered locally (needs the real accounts): Supabase cloud `db push` and dash
 
 ---
 
-## 12. Open release blockers (as of 2026-11-07; see §13 for R1.1)
+## 12. Release status (updated 2026-11-09)
 
-1. **Staging dry run (P4.23)**: §2–§7 rehearsed locally (§11) but not yet on a real staging project.
-2. **Staging measurements (P4.24)**: Lighthouse mobile and the 200-VU k6 save test need a staging deployment. (Exam route JS budget met locally: 166.5 KB < 180 KB.)
+R1.1 is live (clean-start cut-over §13, 2026-11-09); the staging dry run (P4.23) was replaced by the local clean-start rehearsal (§11) plus the production smoke test. Not done and optional for later: Lighthouse mobile and the 200-VU k6 save test (no staging project on the free tiers; the exam route JS budget is enforced in CI: 166.5 KB < 180 KB).
 
 ---
 

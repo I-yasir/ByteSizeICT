@@ -6,7 +6,7 @@
 > **Hard constraint (owner):** everything must work on the **free tiers** of Vercel (Hobby), Supabase, Resend and Google Cloud (§3).
 
 ## Current Step
-`V2.38` — Production clean-start cut-over (D11). **Needs the owner:** RUNBOOK §13 steps 1–8 use the production credentials (database password, Supabase login), which are not on this machine; the push to GitHub (step 9) waits for the owner's explicit OK after step 8.
+**Complete.** R1.1 (V2) is live; all 41 steps done (2026-11-09).
 
 ## Progress
 | Phase | Steps | Done |
@@ -18,8 +18,8 @@
 | V2-D Plan routines (PDF) + plan buttons | 5 | 5 |
 | V2-E Exam audiences by plan | 6 | 6 |
 | V2-F Public site, routine & enrollment flow | 7 | 7 |
-| V2-G Regression & rollout | 4 | 1 |
-| **Total** | **41** | **38** |
+| V2-G Regression & rollout | 4 | 4 |
+| **Total** | **41** | **41** |
 
 ---
 
@@ -176,12 +176,12 @@ Nothing in V2 may require a paid plan. Design rules that follow:
 ### V2-G Regression & rollout (D10: single cut-over)
 - [x] **V2.37 Clean-start rehearsal (D11)**: on an isolated empty local stack, apply 0001–0019 with **no seed**, `bootstrap.prod.sql`, Vault secrets, two admins via `create-admin.ts`, then run the V2 app against it with the full E2E suite (as in the P4.23 rehearsal).
   Verify: all green on the fresh database. Done: 2026-11-09 — Verified on the local stack reset with `supabase db reset --no-seed`: 0001–0019 applied; §2.6 SQL → 20/20 RLS tables, 5 cron jobs, 4 buckets (`plan-routines` public, `import-uploads`/`question-media` private), 0 students/admins/questions/exams/plans; `bootstrap.prod.sql` → 1/6/12/3/6; Vault `site_url` + fresh `cron_secret` (outbox drain HTTP 200 ×5, all cron runs succeeded); `create-admin.ts` ×2 with a fresh pepper; full Playwright suite against a production build with the fresh pepper/cron secret **147/147** (exam route JS 166.5 KB). Found & fixed: `smoke.spec.ts` and the a11y screenshot test assumed the seeded trial exam → new `ensureSampleExam()` fixture (first run 145/147, then 147/147). Dev DB restored with `pnpm db:reset`; `pnpm run ci` exit 0 afterwards (vitest 270/270, pgTAP 165/165, Playwright 147) after fixing a latent V1 flake (timestamp string compare in `runtime-results.test.ts`). Logs: RUNBOOK §11 table; RUNBOOK §2 numbers updated (20 tables, 4 buckets, 0001–0019) and new §13 cut-over procedure.
-- [ ] **V2.38 Production clean-start cut-over (D11)**: fresh backup (`pnpm backup:db` + `backup-storage.ts`) → reset the production database to migrations 0001–0019 **without the dev seed** (`supabase db reset --linked --no-seed`, or a new empty Supabase project + `supabase db push`; never load `seed.sql`) → verify extensions, cron jobs, buckets, RLS (RUNBOOK §2.6) → `bootstrap.prod.sql` → Vault `site_url`/`cron_secret` (re-create if missing) → empty the old files in `question-media` → create the two initial admins (RUNBOOK §6) → push to GitHub (Vercel deploys) → admin enters plans with routine PDFs, payment accounts, settings → RUNBOOK §7 smoke incl. the new flows (plan audience, routine PDFs, Excel image import, delete, enroll flow).
-  Verify: smoke checklist in Done; `select count(*) from students` = 0 before the first real enrollment; Vercel logs clean. Done:
-- [ ] **V2.39 Free-tier check**: Supabase usage (DB < 500 MB, Storage < 1 GB), Vercel Hobby usage, Resend daily volume — all within free limits.
-  Verify: numbers in Done. Done:
-- [ ] **V2.40 Close-out**: RUNBOOK (routine PDFs, Excel image import guide, delete rules), Plan 06 P4.23/P4.24 marked done via this rollout, Plan 07 ticked.
-  Verify: owner sign-off. Done:
+- [x] **V2.38 Production clean-start cut-over (D11)**: fresh backup (`pnpm backup:db` + `backup-storage.ts`) → reset the production database to migrations 0001–0019 **without the dev seed** (`supabase db reset --linked --no-seed`, or a new empty Supabase project + `supabase db push`; never load `seed.sql`) → verify extensions, cron jobs, buckets, RLS (RUNBOOK §2.6) → `bootstrap.prod.sql` → Vault `site_url`/`cron_secret` (re-create if missing) → empty the old files in `question-media` → create the two initial admins (RUNBOOK §6) → push to GitHub (Vercel deploys) → admin enters plans with routine PDFs, payment accounts, settings → RUNBOOK §7 smoke incl. the new flows (plan audience, routine PDFs, Excel image import, delete, enroll flow).
+  Verify: smoke checklist in Done; `select count(*) from students` = 0 before the first real enrollment; Vercel logs clean. Done: (in progress) 2026-11-09 — owner reported RUNBOOK §13 steps 1–8 done (backup, `db reset --linked --no-seed`, verification, bootstrap, Vault, old files, two admins); agent pushed `main` 9a7abd5..7e3c845 (V2.00–V2.37) → Vercel deploy. Deployment check (visitor side, `https://www.bytesizeict.me`; the apex 308-redirects to www): `/`, `/routine`, `/sample`, `/faq`, `/login`, `/admin/login`, `/api/time` → 200 (region sin1); homepage has `id="pricing"`, no routine section, no "ফ্রি স্যাম্পল"; `/routine` h1 "রুটিন" with exactly the 3 bootstrap plans (১ মাস, ৩ মাস, পূর্ণ কোর্স), each "রুটিন শিগগিরই আসছে" (no PDFs yet); `/enroll?plan=no-such` → redirect to `/#pricing`. Owner, 2026-11-09: step 10 admin configuration "successful"; step 11 smoke test incl. the R1.1 flows "all ok" (RUNBOOK §13 checklist: enroll → approve → PIN email → login; Enroll Now → plans; routine PDFs; single-plan enroll; Excel picture import; delete; plan audience; `/routine` for students; test student deleted). Vercel Web Analytics enabled by the owner afterwards; verified live with no code change: `/_vercel/insights/script.js` 200, collector `/_vercel/insights/view` live (400 on an empty test body, not 404), the `<Analytics />` inject ships in the homepage bundle, CSP allows it (same origin).
+- [x] **V2.39 Free-tier check**: Supabase usage (DB < 500 MB, Storage < 1 GB), Vercel Hobby usage, Resend daily volume — all within free limits.
+  Verify: numbers in Done. Done: 2026-11-09 — owner's dashboards: **Supabase** database 30 MB / 500 MB, Storage 0 / 1 GB. **Vercel Hobby (last 30 days)**: Fluid Active CPU 6m 2s / 4 h, CDN requests 11K / 1M, function invocations 10K / 1M, fast origin transfer 49.18 MB / 10 GB, functions storage 37.74 MB / 10 GB, CDN request CPU 7 s / 1 h, deployment storage 13.76 MB / 10 GB, provisioned memory 0.44 / 360 GB-hrs, fast data transfer 113.58 MB / 100 GB — all ≤ 3 % of the limits. **Resend**: 3 / 100 today, 3 / 3,000 this month. All within the free tiers.
+- [x] **V2.40 Close-out**: RUNBOOK (routine PDFs, Excel image import guide, delete rules), Plan 06 P4.23/P4.24 marked done via this rollout, Plan 07 ticked.
+  Verify: owner sign-off. Done: 2026-11-09 — RUNBOOK: §8a Excel image import guide, new §8b (delete rules, routine PDFs, exam audiences, Web Analytics), §11 R1.1 rehearsal, §12 release status, §13 cut-over; Plan 06 P4.23/P4.24 closed via this rollout (Lighthouse/k6 recorded as not run); Plan 07 fully ticked. Owner asked to close the plan after the smoke test (2026-11-09).
 
 ---
 
