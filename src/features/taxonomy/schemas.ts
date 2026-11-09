@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { uuidSchema } from '@/lib/validation';
 
-/** Subjects → chapters → topics, plus tags (PRD A-06). Isomorphic. */
+/** Subjects → chapters → topics (PRD A-06; tags removed in R1.1). Isomorphic. */
 const name = z.string().trim().min(1).max(120);
 const sortOrder = z.number().int().min(0).max(1000).default(0);
 
@@ -21,5 +21,4 @@ export const chapterSchema = z.object({
   sortOrder,
 });
 export const topicSchema = z.object({ id: uuidSchema.optional(), chapterId: uuidSchema, nameBn: name, nameEn: name, sortOrder });
-export const tagSchema = z.object({ id: uuidSchema.optional(), name: z.string().trim().min(1).max(40) });
 export const idSchema = z.object({ id: uuidSchema });

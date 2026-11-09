@@ -30,7 +30,7 @@ export async function getExamForBuilder(id: string) {
   const [questions, assignees, attempts] = await Promise.all([
     supabaseAdmin
       .from('exam_questions')
-      .select('position, question:questions(id, stem, status, difficulty, chapter:chapters(number, name_en))')
+      .select('position, question:questions(id, stem, status, chapter:chapters(number, name_en))')
       .eq('exam_id', id)
       .order('position')
       .then(unwrap),

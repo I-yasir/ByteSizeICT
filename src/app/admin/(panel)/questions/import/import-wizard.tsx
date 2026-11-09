@@ -105,6 +105,9 @@ export function ImportWizard() {
               </div>
             ))}
           </dl>
+          {preview.ignoredColumns.length ? (
+            <Banner variant="info" role="status">{t('legacyColumns', { columns: preview.ignoredColumns.join(', ') })}</Banner>
+          ) : null}
           {preview.errors.length ? (
             <div>
               <div className="mb-2 flex items-center justify-between">

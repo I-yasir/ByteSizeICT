@@ -1,8 +1,8 @@
--- Phase 2 support functions (0013).
+-- Phase 2 support functions (0013) + R1.1 question-meta removal (0014).
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
-select plan(12);
+select plan(16);
 
 insert into subjects (id, slug, name_bn, name_en) values ('00000000-0000-4000-8000-0000000000a1', 't-ict', 'আইসিটি', 'ICT');
 insert into chapters (id, subject_id, number, name_bn, name_en)
@@ -15,7 +15,6 @@ insert into students (id, mobile, email, pin_hash, access_starts_at, access_expi
   ('00000000-0000-4000-8000-0000000005a1', '01990000001', 'a@t.test', 'x', now() - interval '1 day', now() + interval '30 days');
 insert into exams (id, title, status, starts_at, live_ends_at) values
   ('00000000-0000-4000-8000-00000000e001', 'Live', 'published', now() - interval '5 minutes', now() + interval '1 hour');
-insert into tags (id, name) values ('00000000-0000-4000-8000-0000000000f1', 't-tag-1'), ('00000000-0000-4000-8000-0000000000f2', 't-tag-2');
 
 select is((select hash from content_hashes('[{"stem":"  q1 ","a":"A","b":"B ","c":"c","d":"D"}]'::jsonb)),
           (select content_hash from questions where id = '00000000-0000-4000-8000-000000000001'),
@@ -38,12 +37,14 @@ select is(set_exam_audience('00000000-0000-4000-8000-00000000e001', 'selected',
 select is(set_exam_audience('00000000-0000-4000-8000-00000000e001', 'all_active', null), 0, 'all_active clears assignees');
 select is((select count(*)::int from exam_assignees where exam_id = '00000000-0000-4000-8000-00000000e001'), 0, 'assignees removed');
 
-do $$ begin perform set_question_tags('00000000-0000-4000-8000-000000000001',
-  array['00000000-0000-4000-8000-0000000000f1', '00000000-0000-4000-8000-0000000000f2']::uuid[]); end $$;
-do $$ begin perform set_question_tags('00000000-0000-4000-8000-000000000001',
-  array['00000000-0000-4000-8000-0000000000f2']::uuid[]); end $$;
-select results_eq($$select tag_id::text from question_tags where question_id = '00000000-0000-4000-8000-000000000001'$$,
-                  $$values ('00000000-0000-4000-8000-0000000000f2')$$, 'set_question_tags replaces the tag set');
+-- R1.1 (0014): difficulty, type, source, board year and tags are gone with their dependants.
+select hasnt_table('public', 'tags', 'tags table dropped');
+select hasnt_table('public', 'question_tags', 'question_tags table dropped');
+select is((select count(*)::int from information_schema.columns where table_schema = 'public' and table_name = 'questions'
+             and column_name in ('difficulty', 'qtype', 'source', 'board_year')), 0, 'question meta columns dropped');
+select is((select count(*)::int from pg_type t join pg_namespace n on n.oid = t.typnamespace
+             where n.nspname = 'public' and t.typname in ('difficulty_level', 'question_type')), 0, 'meta enums dropped');
+select hasnt_function('public', 'set_question_tags', 'set_question_tags dropped');
 
 -- correct-option lock once the question is in an exam with attempts
 do $$ begin perform start_attempt('00000000-0000-4000-8000-00000000e001', '00000000-0000-4000-8000-0000000005a1'); end $$;

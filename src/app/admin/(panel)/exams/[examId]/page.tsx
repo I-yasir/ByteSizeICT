@@ -27,7 +27,7 @@ export default async function ExamBuilderPage({ params }: { params: Promise<{ ex
         locked={data.locked}
         attemptCount={data.attemptCount}
         startPassed={exam.starts_at ? Date.parse(exam.starts_at) <= new Date().getTime() : false}
-        questions={data.questions.map((q) => ({ id: q.id, stemHtml: q.stemHtml, status: q.status, difficulty: q.difficulty, chapterLabel: q.chapter ? `${q.chapter.number}. ${q.chapter.name_en}` : '' }))}
+        questions={data.questions.map((q) => ({ id: q.id, stemHtml: q.stemHtml, status: q.status, chapterLabel: q.chapter ? `${q.chapter.number}. ${q.chapter.name_en}` : '' }))}
         assignees={data.assignees}
         chapters={taxonomy.subjects.flatMap((s) => s.chapters.map((c) => ({ id: c.id, label: `${s.name_en} · ${c.number}. ${c.name_en}` })))}
         subjects={taxonomy.subjects.map((s) => ({ id: s.id, name_en: s.name_en }))}

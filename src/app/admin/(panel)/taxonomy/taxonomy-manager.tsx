@@ -1,15 +1,14 @@
 'use client';
 
-import { Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Pencil, Plus, X } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n/client';
 import { useState } from 'react';
 import { useAction } from '@/components/admin/use-action';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogActions, DialogContent } from '@/components/ui/dialog';
 import { Field, Input } from '@/components/ui/field';
-import { deleteTag, deleteTopic, upsertChapter, upsertSubject, upsertTag, upsertTopic } from '@/features/taxonomy/actions';
+import { deleteTopic, upsertChapter, upsertSubject, upsertTopic } from '@/features/taxonomy/actions';
 import type { Taxonomy } from '@/features/taxonomy/queries';
 
 type Editing =
@@ -21,7 +20,6 @@ export function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
   const t = useTranslations('admin.taxonomy');
   const { run, pending } = useAction();
   const [editing, setEditing] = useState<Editing | null>(null);
-  const [tagName, setTagName] = useState('');
 
   async function save() {
     if (!editing) return;
@@ -35,8 +33,8 @@ export function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
-      <div className="flex flex-col gap-4 lg:col-span-2">
+    <div className="grid gap-6">
+      <div className="flex flex-col gap-4">
         {taxonomy.subjects.map((subject) => (
           <Card key={subject.id}>
             <div className="mb-3 flex items-center justify-between gap-2">
@@ -75,32 +73,6 @@ export function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
         ))}
         <Button variant="secondary" className="self-start" leadingIcon={<Plus aria-hidden className="size-4" />} onClick={() => setEditing({ kind: 'subject', slug: '', nameBn: '', nameEn: '' })}>{t('addSubject')}</Button>
       </div>
-
-      <Card className="self-start">
-        <h2 className="mb-3 text-lg font-semibold text-fg">{t('tags')}</h2>
-        <form
-          className="mb-3 flex gap-2"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if ((await run(() => upsertTag({ name: tagName }), { success: t('saved') })).ok) setTagName('');
-          }}
-        >
-          <Input value={tagName} onChange={(e) => setTagName(e.target.value)} placeholder={t('newTag')} aria-label={t('newTag')} maxLength={40} />
-          <Button type="submit" disabled={!tagName.trim()} loading={pending}>{t('add')}</Button>
-        </form>
-        <ul className="flex flex-wrap gap-2">
-          {taxonomy.tags.map((tag) => (
-            <li key={tag.id}>
-              <Badge variant="primary" className="h-8 gap-2 pr-1 text-sm">
-                {tag.name}
-                <button type="button" aria-label={t('deleteTag', { name: tag.name })} onClick={() => run(() => deleteTag({ id: tag.id }), { success: t('deleted') })} className="flex size-6 items-center justify-center rounded-sm hover:bg-primary/10">
-                  <Trash2 aria-hidden className="size-3.5" />
-                </button>
-              </Badge>
-            </li>
-          ))}
-        </ul>
-      </Card>
 
       <Dialog open={editing !== null} onOpenChange={(o) => !o && setEditing(null)}>
         {editing ? (

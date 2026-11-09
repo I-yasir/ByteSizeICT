@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { adminAction } from '@/lib/actions';
 import { commitImport as commit, parseImportFile, previewImport as preview } from './import';
 import {
-  bulkTagSchema,
+  
   commitImportSchema,
   createQuestionSchema,
   mediaUploadSchema,
@@ -35,10 +35,6 @@ export const setQuestionStatus = adminAction('questions.status', setStatusSchema
   refresh(await service.setQuestionStatus(input.ids, input.status)),
 );
 
-export const bulkTag = adminAction('questions.bulkTag', bulkTagSchema, async (input) =>
-  refresh(await service.bulkTag(input.ids, input.tagIds, input.op)),
-);
-
 export const createMediaUploadUrl = adminAction('questions.upload', mediaUploadSchema, async (input) =>
   service.createMediaUploadUrl(input.ext),
 );
@@ -58,8 +54,7 @@ const fileSchema = z.instanceof(FormData).transform((form, ctx) => {
 });
 
 export const previewImport = adminAction('questions.importPreview', fileSchema, async (file, { admin }) => {
-  const rows = await parseImportFile({ name: file.name, bytes: await file.arrayBuffer() });
-  return preview(admin.id, rows);
+  return preview(admin.id, await parseImportFile({ name: file.name, bytes: await file.arrayBuffer() }));
 });
 
 export const commitImport = adminAction('questions.importCommit', commitImportSchema, async (input, { admin }) =>
@@ -90,7 +85,6 @@ export const searchBank = adminAction(
   'questions.searchBank',
   z.object({
     chapterId: z.uuid().optional(),
-    difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
     q: z.string().max(200).optional(),
     page: z.number().int().min(1).default(1),
   }),

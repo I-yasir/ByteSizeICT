@@ -1,5 +1,5 @@
 import 'server-only';
-import { check, ServiceError, unwrap } from '@/lib/actions';
+import { ServiceError, unwrap } from '@/lib/actions';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { QUESTION_MEDIA_BUCKET } from '@/lib/supabase/storage';
 import type { QuestionInput } from './schemas';
@@ -23,10 +23,6 @@ function toRow(q: QuestionInput, adminId: string) {
     correct_option: q.correctOption,
     explanation: q.explanation,
     explanation_image_path: q.explanationImagePath,
-    difficulty: q.difficulty,
-    qtype: q.qtype,
-    source: q.source,
-    board_year: q.boardYear,
     status: q.status,
     updated_by: adminId,
   };
@@ -64,7 +60,6 @@ export async function createQuestion(adminId: string, q: QuestionInput, force = 
   const { id } = unwrap(
     await supabaseAdmin.from('questions').insert({ ...toRow(q, adminId), created_by: adminId }).select('id').single(),
   );
-  check(await supabaseAdmin.rpc('set_question_tags', { p_question_id: id, p_tag_ids: q.tagIds }));
   return { id };
 }
 
@@ -77,16 +72,15 @@ export async function updateQuestion(adminId: string, id: string, q: QuestionInp
   // The DB trigger raises QUESTION_LOCKED_CORRECT_OPTION if the answer key changes after use.
   const updated = unwrap(await supabaseAdmin.from('questions').update(toRow(q, adminId)).eq('id', id).select('id'));
   if (updated.length === 0) throw new ServiceError('NOT_FOUND');
-  check(await supabaseAdmin.rpc('set_question_tags', { p_question_id: id, p_tag_ids: q.tagIds }));
   return { id };
 }
 
 export async function duplicateQuestion(adminId: string, id: string): Promise<{ id: string }> {
-  const source = unwrap(await supabaseAdmin.from('questions').select('*, question_tags(tag_id)').eq('id', id).maybeSingle());
+  const source = unwrap(await supabaseAdmin.from('questions').select('*').eq('id', id).maybeSingle());
   if (!source) throw new ServiceError('NOT_FOUND');
   const {
     id: _id, content_hash: _hash, created_at: _c, updated_at: _u, times_used: _tu, times_answered: _ta,
-    times_correct: _tc, correct_rate: _cr, question_tags: tags, ...copy
+    times_correct: _tc, correct_rate: _cr, ...copy
   } = source;
   const created = unwrap(
     await supabaseAdmin
@@ -95,23 +89,12 @@ export async function duplicateQuestion(adminId: string, id: string): Promise<{ 
       .select('id')
       .single(),
   );
-  check(await supabaseAdmin.rpc('set_question_tags', { p_question_id: created.id, p_tag_ids: tags.map((t) => t.tag_id) }));
   return { id: created.id };
 }
 
 export async function setQuestionStatus(ids: string[], status: 'draft' | 'active' | 'archived'): Promise<{ updated: number }> {
   const rows = unwrap(await supabaseAdmin.from('questions').update({ status }).in('id', ids).select('id'));
   return { updated: rows.length };
-}
-
-export async function bulkTag(ids: string[], tagIds: string[], op: 'add' | 'remove'): Promise<{ updated: number }> {
-  if (op === 'add') {
-    const pairs = ids.flatMap((question_id) => tagIds.map((tag_id) => ({ question_id, tag_id })));
-    check(await supabaseAdmin.from('question_tags').upsert(pairs, { onConflict: 'question_id,tag_id', ignoreDuplicates: true }));
-  } else {
-    check(await supabaseAdmin.from('question_tags').delete().in('question_id', ids).in('tag_id', tagIds));
-  }
-  return { updated: ids.length };
 }
 
 /** Signed upload URL for an admin image upload (≤ 1 MB, png/jpeg/webp enforced by the bucket). */

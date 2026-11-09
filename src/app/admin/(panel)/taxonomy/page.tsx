@@ -4,7 +4,7 @@ import { PageHeader } from '@/components/admin/ui';
 import { getTaxonomy } from '@/features/taxonomy/queries';
 import { TaxonomyManager } from './taxonomy-manager';
 
-/** /admin/taxonomy — subjects, chapters, topics, tags (PRD A-06). */
+/** /admin/taxonomy — subjects, chapters, topics (PRD A-06; tags removed in R1.1). */
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations('admin.taxonomy'))('title') };
 }

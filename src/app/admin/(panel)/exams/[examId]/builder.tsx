@@ -20,7 +20,7 @@ import { searchStudentsForAudience } from '@/features/students/actions';
 import { cn } from '@/lib/utils';
 import { type ExamRow, ExamSettingsForm } from '../exam-settings-form';
 
-type Q = { id: string; stemHtml: string; status: string; difficulty: string; chapterLabel: string };
+type Q = { id: string; stemHtml: string; status: string; chapterLabel: string };
 type Student = { id: string; mobile: string; email: string; admin_label: string | null };
 type Chapter = { id: string; label: string };
 
@@ -71,7 +71,7 @@ function SortableRow({ q, index, total, onMove, onRemove, locked }: { q: Q; inde
       <span className="mt-2 w-7 shrink-0 font-num text-sm font-semibold text-fg-muted">{index + 1}.</span>
       <div className="min-w-0 flex-1">
         <RichText html={q.stemHtml} className="line-clamp-2 text-sm" />
-        <span className="text-xs text-fg-subtle">{q.chapterLabel} · {q.difficulty}</span>
+        <span className="text-xs text-fg-subtle">{q.chapterLabel}</span>
       </div>
       <span className="flex shrink-0">
         <Button size="icon" variant="ghost" aria-label={t('moveUp')} disabled={locked || index === 0} onClick={() => onMove(index, index - 1)}><ArrowUp aria-hidden className="size-4" /></Button>
@@ -87,7 +87,7 @@ function QuestionsTab({ exam, locked, questions: initial, chapters }: BuilderPro
   const { run, pending } = useAction();
   const [selected, setSelected] = useState<Q[]>(initial);
   const [dirty, setDirty] = useState(false);
-  const [filters, setFilters] = useState({ chapterId: '', difficulty: '', q: '' });
+  const [filters, setFilters] = useState({ chapterId: '', q: '' });
   const [bank, setBank] = useState<Q[]>([]);
   const [searching, setSearching] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
@@ -96,19 +96,18 @@ function QuestionsTab({ exam, locked, questions: initial, chapters }: BuilderPro
     setSearching(true);
     const result = await searchBank({
       ...(filters.chapterId ? { chapterId: filters.chapterId } : {}),
-      ...(filters.difficulty ? { difficulty: filters.difficulty as 'easy' } : {}),
       ...(filters.q ? { q: filters.q } : {}),
       page: 1,
     });
     if (result.ok) {
-      setBank(result.data.items.map((r) => ({ id: r.id, stemHtml: r.stemHtml, status: r.status, difficulty: r.difficulty, chapterLabel: r.chapter ? `${r.chapter.number}. ${r.chapter.name_en}` : '' })));
+      setBank(result.data.items.map((r) => ({ id: r.id, stemHtml: r.stemHtml, status: r.status, chapterLabel: r.chapter ? `${r.chapter.number}. ${r.chapter.name_en}` : '' })));
     }
     setSearching(false);
   }
   useEffect(() => {
     let active = true;
     void searchBank({ page: 1 }).then((result) => {
-      if (active && result.ok) setBank(result.data.items.map((r) => ({ id: r.id, stemHtml: r.stemHtml, status: r.status, difficulty: r.difficulty, chapterLabel: r.chapter ? `${r.chapter.number}. ${r.chapter.name_en}` : '' })));
+      if (active && result.ok) setBank(result.data.items.map((r) => ({ id: r.id, stemHtml: r.stemHtml, status: r.status, chapterLabel: r.chapter ? `${r.chapter.number}. ${r.chapter.name_en}` : '' })));
     });
     return () => {
       active = false;
@@ -135,11 +134,7 @@ function QuestionsTab({ exam, locked, questions: initial, chapters }: BuilderPro
             <option value="">{t('allChapters')}</option>
             {chapters.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
           </Select>
-          <Select value={filters.difficulty} onChange={(e) => setFilters((f) => ({ ...f, difficulty: e.target.value }))} aria-label={t('difficulty')}>
-            <option value="">{t('allDifficulties')}</option>
-            {['easy', 'medium', 'hard'].map((d) => <option key={d} value={d}>{d}</option>)}
-          </Select>
-          <div className="flex gap-2 sm:col-span-2">
+          <div className="flex gap-2">
             <Input value={filters.q} onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))} placeholder={t('search')} aria-label={t('search')} />
             <Button type="submit" size="icon" variant="secondary" aria-label={t('search')} loading={searching}><Search aria-hidden className="size-4" /></Button>
           </div>
@@ -149,7 +144,7 @@ function QuestionsTab({ exam, locked, questions: initial, chapters }: BuilderPro
             <li key={q.id} className="flex items-start gap-2 rounded-md border border-border p-2">
               <div className="min-w-0 flex-1">
                 <RichText html={q.stemHtml} className="line-clamp-2 text-sm" />
-                <span className="text-xs text-fg-subtle">{q.chapterLabel} · {q.difficulty}</span>
+                <span className="text-xs text-fg-subtle">{q.chapterLabel}</span>
               </div>
               {ids.has(q.id) ? (
                 <Badge variant="success">{t('added')}</Badge>

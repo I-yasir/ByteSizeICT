@@ -9,17 +9,19 @@ import { contentHashes } from './service';
 
 /** Bulk import (PRD A-08, docs/02_AppFlow.md §6.7): ≤ 2,000 rows, ≤ 5 MB, CSV or XLSX. */
 export const IMPORT_COLUMNS = [
-  'subject', 'chapter_number', 'topic', 'stem', 'option_a', 'option_b', 'option_c', 'option_d', 'correct',
-  'explanation', 'difficulty', 'type', 'source', 'board_year', 'tags',
+  'subject', 'chapter_number', 'topic', 'stem', 'option_a', 'option_b', 'option_c', 'option_d', 'correct', 'explanation',
 ] as const;
+/** R1 template columns removed in R1.1 (D9): still accepted so old files import, but their values are ignored. */
+export const LEGACY_IMPORT_COLUMNS = ['difficulty', 'type', 'source', 'board_year', 'tags'] as const;
 const REQUIRED_COLUMNS = ['chapter_number', 'stem', 'option_a', 'option_b', 'option_c', 'option_d', 'correct'] as const;
 export const MAX_IMPORT_ROWS = 2000;
 export const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
 
 type RawRow = Record<string, string>;
 export type ImportIssue = { row: number; column: string; message: string };
+export type ParsedImport = { rows: RawRow[]; ignoredColumns: string[] };
 
-export async function parseImportFile(file: { name: string; bytes: ArrayBuffer }): Promise<RawRow[]> {
+export async function parseImportFile(file: { name: string; bytes: ArrayBuffer }): Promise<ParsedImport> {
   if (file.bytes.byteLength > MAX_IMPORT_BYTES) throw new ServiceError('IMPORT_TOO_LARGE');
   const lower = file.name.toLowerCase();
   let headers: string[];
@@ -56,13 +58,16 @@ export async function parseImportFile(file: { name: string; bytes: ArrayBuffer }
     throw new ServiceError('IMPORT_BAD_HEADERS');
   }
 
-  const known = new Set<string>(IMPORT_COLUMNS);
+  const legacy = new Set<string>(LEGACY_IMPORT_COLUMNS);
+  const known = new Set<string>([...IMPORT_COLUMNS, ...LEGACY_IMPORT_COLUMNS]);
   const present = headers.filter(Boolean);
   if (REQUIRED_COLUMNS.some((col) => !present.includes(col)) || present.some((col) => !known.has(col))) {
     throw new ServiceError('IMPORT_BAD_HEADERS', { meta: { expected: IMPORT_COLUMNS } });
   }
   if (rows.length > MAX_IMPORT_ROWS) throw new ServiceError('IMPORT_TOO_LARGE', { meta: { rows: rows.length } });
-  return rows;
+  const ignoredColumns = present.filter((col) => legacy.has(col));
+  for (const row of rows) for (const col of ignoredColumns) delete row[col];
+  return { rows, ignoredColumns };
 }
 
 const cell = (max: number) => z.string().trim().max(max);
@@ -77,11 +82,6 @@ const rowSchema = z.object({
   option_d: cell(1000).min(1),
   correct: z.string().trim().toUpperCase().pipe(z.enum(['A', 'B', 'C', 'D'])),
   explanation: cell(8000).optional(),
-  difficulty: z.string().trim().toLowerCase().pipe(z.enum(['easy', 'medium', 'hard'])).optional(),
-  type: z.string().trim().toLowerCase().pipe(z.enum(['knowledge', 'application', 'multi_point'])).optional(),
-  source: cell(120).optional(),
-  board_year: z.coerce.number().int().min(2000).max(2100).optional(),
-  tags: cell(400).optional(),
 });
 
 export type ImportRow = {
@@ -92,11 +92,6 @@ export type ImportRow = {
   options: [string, string, string, string];
   correct: 'A' | 'B' | 'C' | 'D';
   explanation: string | null;
-  difficulty: 'easy' | 'medium' | 'hard';
-  qtype: 'knowledge' | 'application' | 'multi_point';
-  source: string | null;
-  boardYear: number | null;
-  tags: string[];
 };
 
 export type ImportPreview = {
@@ -107,10 +102,12 @@ export type ImportPreview = {
   duplicates: number;
   errors: ImportIssue[];
   duplicateRows: { row: number; reason: 'in_file' | 'in_bank' }[];
+  /** Legacy columns present in the file and ignored (D9); the wizard shows a warning. */
+  ignoredColumns: string[];
 };
 
 /** Validates rows and stores the valid, non-duplicate ones under an import token for 30 minutes. */
-export async function previewImport(adminId: string, rawRows: RawRow[]): Promise<ImportPreview> {
+export async function previewImport(adminId: string, { rows: rawRows, ignoredColumns }: ParsedImport): Promise<ImportPreview> {
   const subjects = unwrap(await supabaseAdmin.from('subjects').select('id, slug, chapters(id, number)').order('sort_order'));
   const defaultSubject = subjects[0];
   const errors: ImportIssue[] = [];
@@ -146,11 +143,6 @@ export async function previewImport(adminId: string, rawRows: RawRow[]): Promise
       options: [r.option_a, r.option_b, r.option_c, r.option_d],
       correct: r.correct,
       explanation: r.explanation ?? null,
-      difficulty: r.difficulty ?? 'medium',
-      qtype: r.type ?? 'knowledge',
-      source: r.source ?? null,
-      boardYear: r.board_year ?? null,
-      tags: [...new Set((r.tags ?? '').split('|').map((t) => t.trim()).filter(Boolean))].slice(0, 20),
     });
   });
 
@@ -185,7 +177,7 @@ export async function previewImport(adminId: string, rawRows: RawRow[]): Promise
       await supabaseAdmin.from('question_import_batches').insert({ admin_id: adminId, rows: valid, summary }).select('id').single(),
     ).id;
   }
-  return { importToken, total: rawRows.length, ...summary, errors: errors.slice(0, 500), duplicateRows };
+  return { importToken, total: rawRows.length, ...summary, errors: errors.slice(0, 500), duplicateRows, ignoredColumns };
 }
 
 export async function commitImport(
@@ -225,15 +217,6 @@ export async function commitImport(
     for (const t of created) topicIds.set(topicKey(t.chapter_id, t.name_en), t.id);
   }
 
-  // Tags: create missing, case-insensitively.
-  const tagNames = [...new Set(rows.flatMap((r) => r.tags))];
-  const tagIds = new Map<string, string>();
-  if (tagNames.length > 0) {
-    check(await supabaseAdmin.from('tags').upsert(tagNames.map((name) => ({ name })), { onConflict: 'name', ignoreDuplicates: true }));
-    const tags = unwrap(await supabaseAdmin.from('tags').select('id, name').in('name', tagNames));
-    for (const t of tags) tagIds.set(t.name.toLowerCase(), t.id);
-  }
-
   let imported = 0;
   for (let i = 0; i < rows.length; i += 200) {
     const chunk = rows.slice(i, i + 200);
@@ -251,10 +234,6 @@ export async function commitImport(
             option_d: r.options[3],
             correct_option: r.correct,
             explanation: r.explanation,
-            difficulty: r.difficulty,
-            qtype: r.qtype,
-            source: r.source,
-            board_year: r.boardYear,
             status: input.defaultStatus,
             created_by: adminId,
             updated_by: adminId,
@@ -262,13 +241,6 @@ export async function commitImport(
         )
         .select('id'),
     );
-    const links = inserted.flatMap((q, j) =>
-      (chunk[j]?.tags ?? []).flatMap((name) => {
-        const tagId = tagIds.get(name.toLowerCase());
-        return tagId ? [{ question_id: q.id, tag_id: tagId }] : [];
-      }),
-    );
-    if (links.length > 0) check(await supabaseAdmin.from('question_tags').insert(links));
     imported += inserted.length;
   }
 
@@ -293,11 +265,6 @@ const EXAMPLE_ROW: Record<(typeof IMPORT_COLUMNS)[number], string> = {
   option_d: '13',
   correct: 'C',
   explanation: '$8 + 0 + 2 + 1 = 11$',
-  difficulty: 'easy',
-  type: 'application',
-  source: 'Dhaka Board',
-  board_year: '2023',
-  tags: 'board-question|math',
 };
 
 const csvEscape = (value: string) => (/[",\n\r]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value);

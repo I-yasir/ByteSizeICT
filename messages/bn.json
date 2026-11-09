@@ -798,11 +798,8 @@
       "addTopic": "টপিক যোগ",
       "addSubject": "বিষয় যোগ",
       "deleteTopic": "{name} মুছুন",
-      "deleteTag": "{name} মুছুন",
       "deleted": "মুছে ফেলা হয়েছে",
       "saved": "সেভ হয়েছে",
-      "tags": "ট্যাগ",
-      "newTag": "নতুন ট্যাগ",
       "add": "যোগ",
       "dialog": {
         "subject": "বিষয়",
@@ -828,27 +825,12 @@
       "search": "প্রশ্নের লেখায় খুঁজুন",
       "chapter": "অধ্যায়",
       "allChapters": "সব অধ্যায়",
-      "difficulty": "কাঠিন্য",
-      "allDifficulties": "সব কাঠিন্য",
-      "difficulties": {
-        "easy": "সহজ",
-        "medium": "মাঝারি",
-        "hard": "কঠিন"
-      },
-      "type": "ধরন",
-      "allTypes": "সব ধরন",
-      "types": {
-        "knowledge": "জ্ঞানমূলক",
-        "application": "প্রয়োগমূলক",
-        "multi_point": "বহুপদী"
-      },
       "sort": "সাজান",
       "sorts": {
         "newest": "নতুন আগে",
         "most_used": "বেশি ব্যবহৃত",
         "lowest_correct": "সবচেয়ে কম সঠিক"
       },
-      "tags": "ট্যাগ",
       "status": "অবস্থা",
       "statuses": {
         "draft": "খসড়া",
@@ -859,7 +841,6 @@
       "cols": {
         "stem": "প্রশ্ন",
         "chapter": "অধ্যায় / টপিক",
-        "difficulty": "কাঠিন্য",
         "used": "ব্যবহার",
         "correct": "সঠিক %",
         "status": "অবস্থা",
@@ -869,9 +850,6 @@
       "duplicate": "কপি করুন",
       "duplicated": "কপি তৈরি হয়েছে",
       "selected": "{n}টি নির্বাচিত",
-      "chooseTag": "ট্যাগ বেছে নিন",
-      "addTag": "ট্যাগ যোগ",
-      "removeTag": "ট্যাগ সরান",
       "setStatus": {
         "active": "সক্রিয় করুন",
         "draft": "খসড়া করুন",
@@ -900,29 +878,12 @@
       "correct": "সঠিক",
       "optionRequired": "লেখা অথবা ছবি দিন।",
       "explanation": "ব্যাখ্যা / সমাধান",
-      "difficulty": "কাঠিন্য",
-      "difficulties": {
-        "easy": "সহজ",
-        "medium": "মাঝারি",
-        "hard": "কঠিন"
-      },
-      "type": "ধরন",
-      "types": {
-        "knowledge": "জ্ঞানমূলক",
-        "application": "প্রয়োগমূলক",
-        "multi_point": "বহুপদী"
-      },
-      "source": "উৎস (যেমন ঢাকা বোর্ড)",
-      "boardYear": "সাল",
       "status": "অবস্থা",
       "statuses": {
         "draft": "খসড়া",
         "active": "সক্রিয়",
         "archived": "আর্কাইভ"
       },
-      "tags": "ট্যাগ",
-      "newTag": "নতুন ট্যাগ",
-      "addTag": "ট্যাগ যোগ",
       "save": "সেভ",
       "saveAnother": "সেভ করে আরেকটি",
       "cancel": "বাতিল",
@@ -963,7 +924,8 @@
       "nothingToImport": "ইমপোর্ট করার মতো সঠিক কোনো সারি নেই।",
       "done": "{n}টি প্রশ্ন ইমপোর্ট হয়েছে।",
       "doneDetail": "বাদ: {d}টি ডুপ্লিকেট, {e}টি ভুল সারি।",
-      "toBank": "প্রশ্নব্যাংকে যান"
+      "toBank": "প্রশ্নব্যাংকে যান",
+      "legacyColumns": "পুরোনো টেমপ্লেটের এই কলামগুলো আর ব্যবহার হয় না, তাই উপেক্ষা করা হয়েছে: {columns}।"
     },
     "exams": {
       "title": "পরীক্ষা",
@@ -1022,8 +984,6 @@
       "bank": "প্রশ্নব্যাংক",
       "chapter": "অধ্যায়",
       "allChapters": "সব অধ্যায়",
-      "difficulty": "কাঠিন্য",
-      "allDifficulties": "সব কাঠিন্য",
       "search": "খুঁজুন",
       "add": "যোগ",
       "added": "যোগ হয়েছে",

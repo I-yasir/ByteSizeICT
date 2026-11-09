@@ -2,8 +2,6 @@ import { z } from 'zod';
 import { optionalText, optionKeySchema, paginationSchema, uuidSchema } from '@/lib/validation';
 
 /** Question bank inputs (PRD A-06…A-09, TRD §10.7 length limits). Isomorphic. */
-export const difficultySchema = z.enum(['easy', 'medium', 'hard']);
-export const questionTypeSchema = z.enum(['knowledge', 'application', 'multi_point']);
 export const contentStatusSchema = z.enum(['draft', 'active', 'archived']);
 
 const imagePath = z
@@ -30,12 +28,7 @@ export const questionInputSchema = z
     correctOption: optionKeySchema,
     explanation: optionalText(8000),
     explanationImagePath: imagePath,
-    difficulty: difficultySchema.default('medium'),
-    qtype: questionTypeSchema.default('knowledge'),
-    source: optionalText(120),
-    boardYear: z.number().int().min(2000).max(2100).nullish().transform((value) => value ?? null),
     status: contentStatusSchema.default('draft'),
-    tagIds: z.array(uuidSchema).max(20).default([]),
   })
   .superRefine((q, ctx) => {
     for (const key of ['A', 'B', 'C', 'D'] as const) {
@@ -50,19 +43,12 @@ export const createQuestionSchema = z.object({ question: questionInputSchema, fo
 export const updateQuestionSchema = z.object({ id: uuidSchema, question: questionInputSchema, force: z.boolean().default(false) });
 export const questionIdsSchema = z.object({ ids: z.array(uuidSchema).min(1).max(500) });
 export const setStatusSchema = questionIdsSchema.extend({ status: contentStatusSchema });
-export const bulkTagSchema = questionIdsSchema.extend({
-  tagIds: z.array(uuidSchema).min(1).max(20),
-  op: z.enum(['add', 'remove']),
-});
 export const mediaUploadSchema = z.object({ ext: z.enum(['png', 'jpg', 'jpeg', 'webp']) });
 
 export const questionSearchSchema = paginationSchema.extend({
   subjectId: uuidSchema.optional(),
   chapterId: uuidSchema.optional(),
   topicId: uuidSchema.optional(),
-  difficulty: difficultySchema.optional(),
-  qtype: questionTypeSchema.optional(),
-  tagIds: z.array(uuidSchema).max(10).default([]),
   status: z.array(contentStatusSchema).min(1).default(['active', 'draft']),
   unusedOnly: z.boolean().default(false),
   q: z.string().max(200).optional(),

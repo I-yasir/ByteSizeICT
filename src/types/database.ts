@@ -738,53 +738,14 @@ export type Database = {
           },
         ]
       }
-      question_tags: {
-        Row: {
-          question_id: string
-          tag_id: string
-        }
-        Insert: {
-          question_id: string
-          tag_id: string
-        }
-        Update: {
-          question_id?: string
-          tag_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "question_tags_question_id_fkey"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "paper_questions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "question_tags_question_id_fkey"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "questions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "question_tags_tag_id_fkey"
-            columns: ["tag_id"]
-            isOneToOne: false
-            referencedRelation: "tags"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       questions: {
         Row: {
-          board_year: number | null
           chapter_id: string
           content_hash: string
           correct_option: Database["public"]["Enums"]["option_key"]
           correct_rate: number | null
           created_at: string
           created_by: string | null
-          difficulty: Database["public"]["Enums"]["difficulty_level"]
           explanation: string | null
           explanation_image_path: string | null
           id: string
@@ -796,8 +757,6 @@ export type Database = {
           option_c_image_path: string | null
           option_d: string
           option_d_image_path: string | null
-          qtype: Database["public"]["Enums"]["question_type"]
-          source: string | null
           status: Database["public"]["Enums"]["content_status"]
           stem: string
           stem_image_path: string | null
@@ -809,14 +768,12 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
-          board_year?: number | null
           chapter_id: string
           content_hash?: string
           correct_option: Database["public"]["Enums"]["option_key"]
           correct_rate?: number | null
           created_at?: string
           created_by?: string | null
-          difficulty?: Database["public"]["Enums"]["difficulty_level"]
           explanation?: string | null
           explanation_image_path?: string | null
           id?: string
@@ -828,8 +785,6 @@ export type Database = {
           option_c_image_path?: string | null
           option_d?: string
           option_d_image_path?: string | null
-          qtype?: Database["public"]["Enums"]["question_type"]
-          source?: string | null
           status?: Database["public"]["Enums"]["content_status"]
           stem: string
           stem_image_path?: string | null
@@ -841,14 +796,12 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
-          board_year?: number | null
           chapter_id?: string
           content_hash?: string
           correct_option?: Database["public"]["Enums"]["option_key"]
           correct_rate?: number | null
           created_at?: string
           created_by?: string | null
-          difficulty?: Database["public"]["Enums"]["difficulty_level"]
           explanation?: string | null
           explanation_image_path?: string | null
           id?: string
@@ -860,8 +813,6 @@ export type Database = {
           option_c_image_path?: string | null
           option_d?: string
           option_d_image_path?: string | null
-          qtype?: Database["public"]["Enums"]["question_type"]
-          source?: string | null
           status?: Database["public"]["Enums"]["content_status"]
           stem?: string
           stem_image_path?: string | null
@@ -1088,24 +1039,6 @@ export type Database = {
           slug?: string
           sort_order?: number
           updated_at?: string
-        }
-        Relationships: []
-      }
-      tags: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
         }
         Relationships: []
       }
@@ -1403,10 +1336,6 @@ export type Database = {
         Args: { p_exam_id: string; p_question_ids: string[] }
         Returns: number
       }
-      set_question_tags: {
-        Args: { p_question_id: string; p_tag_ids: string[] }
-        Returns: undefined
-      }
       start_attempt: {
         Args: { p_exam_id: string; p_student_id: string }
         Returns: string
@@ -1476,7 +1405,6 @@ export type Database = {
       attempt_status: "in_progress" | "submitted" | "auto_submitted"
       content_status: "draft" | "active" | "archived"
       credentials_status: "pending" | "sent" | "failed"
-      difficulty_level: "easy" | "medium" | "hard"
       exam_audience: "all_active" | "selected"
       exam_status: "draft" | "published" | "archived"
       option_key: "A" | "B" | "C" | "D"
@@ -1490,7 +1418,6 @@ export type Database = {
         | "sheet_result_append"
       outbox_status: "pending" | "processing" | "done" | "failed"
       payment_method: "bkash" | "nagad" | "rocket" | "bank"
-      question_type: "knowledge" | "application" | "multi_point"
       student_status: "active" | "suspended" | "cancelled"
     }
     CompositeTypes: {
@@ -1626,7 +1553,6 @@ export const Constants = {
       attempt_status: ["in_progress", "submitted", "auto_submitted"],
       content_status: ["draft", "active", "archived"],
       credentials_status: ["pending", "sent", "failed"],
-      difficulty_level: ["easy", "medium", "hard"],
       exam_audience: ["all_active", "selected"],
       exam_status: ["draft", "published", "archived"],
       option_key: ["A", "B", "C", "D"],
@@ -1641,7 +1567,6 @@ export const Constants = {
       ],
       outbox_status: ["pending", "processing", "done", "failed"],
       payment_method: ["bkash", "nagad", "rocket", "bank"],
-      question_type: ["knowledge", "application", "multi_point"],
       student_status: ["active", "suspended", "cancelled"],
     },
   },

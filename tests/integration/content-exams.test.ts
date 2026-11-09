@@ -42,21 +42,19 @@ beforeEach(() => {
 afterAll(cleanup);
 
 describe('taxonomy (P2.10)', () => {
-  it('creates topics/tags, rejects duplicates, and blocks deleting a used topic', async () => {
+  it('creates topics, rejects duplicates, and blocks deleting a used topic', async () => {
     const topic = ok(await taxonomyActions.upsertTopic({ chapterId: bank.chapterId, nameBn: 'বাইনারি', nameEn: `Binary ${bank.slug}` }));
     expect(await taxonomyActions.upsertTopic({ chapterId: bank.chapterId, nameBn: 'x', nameEn: `Binary ${bank.slug}` })).toMatchObject({
       ok: false, error: { code: 'VALIDATION', field: 'nameEn' },
     });
-    const tag = ok(await taxonomyActions.upsertTag({ name: `tag-${bank.slug}` }));
-
-    const q = ok(await questionActions.createQuestion({ question: question({ topicId: topic.id, tagIds: [tag.id] }) }));
+    const q = ok(await questionActions.createQuestion({ question: question({ topicId: topic.id }) }));
     trackQuestion(q.id);
     expect(await taxonomyActions.deleteTopic({ id: topic.id })).toMatchObject({ ok: false, error: { code: 'VALIDATION' } });
 
     const tree = await getTaxonomy();
     const chapter = tree.subjects.flatMap((s) => s.chapters).find((c) => c.id === bank.chapterId);
     expect(chapter?.topics.map((t) => t.id)).toContain(topic.id);
-    expect(ok(await taxonomyActions.deleteTag({ id: tag.id }))).toEqual({ deleted: true });
+    expect(tree).not.toHaveProperty('tags'); // R1.1: tags removed
   });
 });
 
@@ -99,19 +97,14 @@ describe('questions (P2.12–P2.13)', () => {
     expect((await getQuestionForEdit(copy.id))?.status).toBe('draft');
   });
 
-  it('search: filters, tags all-of, unused-only, sort, status and bulk ops', async () => {
-    const [q1, q2] = bank.questions;
-    if (!q1 || !q2) throw new Error('fixture');
-    const tagA = ok(await taxonomyActions.upsertTag({ name: `a-${bank.slug}` }));
-    const tagB = ok(await taxonomyActions.upsertTag({ name: `b-${bank.slug}` }));
-    ok(await questionActions.bulkTag({ ids: [q1.id, q2.id], tagIds: [tagA.id], op: 'add' }));
-    ok(await questionActions.bulkTag({ ids: [q2.id], tagIds: [tagB.id], op: 'add' }));
-
-    const both = await searchQuestions({ tagIds: [tagA.id, tagB.id] });
-    expect(both.items.map((q) => q.id)).toEqual([q2.id]);
+  it('search: filters, unused-only, sort, status and bulk status', async () => {
+    const [, q2] = bank.questions;
+    if (!q2) throw new Error('fixture');
     const text = await searchQuestions({ chapterId: bank.chapterId, q: `${bank.slug} question 2` });
     expect(text.items.map((q) => q.id)).toEqual([q2.id]);
     expect(text.items[0]?.stemHtml).toContain('katex');
+    // R1.1: no difficulty/type/source/board year/tags on bank rows
+    for (const key of ['difficulty', 'qtype', 'source', 'board_year', 'tags']) expect(text.items[0]).not.toHaveProperty(key);
 
     const subject = await searchQuestions({ subjectId: bank.subjectId, unusedOnly: true, sort: 'most_used' });
     expect(subject.items.every((q) => q.times_used === 0)).toBe(true);
@@ -120,8 +113,6 @@ describe('questions (P2.12–P2.13)', () => {
     expect((await searchQuestions({ chapterId: bank.chapterId })).items.map((q) => q.id)).not.toContain(q2.id);
     expect((await searchQuestions({ chapterId: bank.chapterId, status: ['archived'] })).items.map((q) => q.id)).toEqual([q2.id]);
     ok(await questionActions.setQuestionStatus({ ids: [q2.id], status: 'active' }));
-    ok(await questionActions.bulkTag({ ids: [q2.id], tagIds: [tagB.id], op: 'remove' }));
-    expect((await searchQuestions({ tagIds: [tagB.id] })).items).toHaveLength(0);
   });
 
   it('signed upload URL for question media', async () => {
@@ -131,15 +122,17 @@ describe('questions (P2.12–P2.13)', () => {
   });
 });
 
-describe('bulk import (P2.14)', () => {
-  const header = 'subject,chapter_number,topic,stem,option_a,option_b,option_c,option_d,correct,explanation,difficulty,type,source,board_year,tags';
-  const csvFile = (lines: string[]) => {
+describe('bulk import (P2.14, R1.1 V2.07)', () => {
+  // The R1 template (15 columns) — still accepted; its five removed columns are ignored (D9).
+  const legacyHeader = 'subject,chapter_number,topic,stem,option_a,option_b,option_c,option_d,correct,explanation,difficulty,type,source,board_year,tags';
+  const header = 'subject,chapter_number,topic,stem,option_a,option_b,option_c,option_d,correct,explanation';
+  const csvFile = (lines: string[], head = legacyHeader) => {
     const form = new FormData();
-    form.set('file', new File([`${header}\n${lines.join('\n')}\n`], 'questions.csv', { type: 'text/csv' }));
+    form.set('file', new File([`${head}\n${lines.join('\n')}\n`], 'questions.csv', { type: 'text/csv' }));
     return form;
   };
 
-  it('previews good, invalid and duplicate rows, then commits valid ones with topics and tags', async () => {
+  it('legacy file: previews good, invalid and duplicate rows, ignores the removed columns, commits valid rows with topics', async () => {
     const s = `imp-${crypto.randomUUID().slice(0, 8)}`;
     const existing = bank.questions[0];
     const { data: existingRow } = await testDb.from('questions').select('stem, option_a, option_b, option_c, option_d').eq('id', existing?.id ?? '').single();
@@ -150,27 +143,36 @@ describe('bulk import (P2.14)', () => {
       `${bank.slug},1,,"${existingRow?.stem}",${existingRow?.option_a},${existingRow?.option_b},${existingRow?.option_c},${existingRow?.option_d},A,,,,,,`, // in bank
       `${bank.slug},9,,"bad chapter",a,b,c,d,A,,,,,,`,
       `${bank.slug},1,,"bad answer",a,b,c,d,E,,,,,,`,
-      `${bank.slug},1,,"bad year",a,b,c,d,A,,,,,1999,`,
+      `${bank.slug},1,,"${s} bad year ignored",a,b,c,d,A,,,,,1999,`, // R1 would reject 1999; the column is now ignored
     ];
     const preview = ok(await questionActions.previewImport(csvFile(lines)));
-    expect(preview).toMatchObject({ total: 7, valid: 2, invalid: 3, duplicates: 2 });
+    expect(preview).toMatchObject({ total: 7, valid: 3, invalid: 2, duplicates: 2 });
+    expect(preview.ignoredColumns).toEqual(['difficulty', 'type', 'source', 'board_year', 'tags']);
     expect(preview.duplicateRows).toEqual([{ row: 4, reason: 'in_file' }, { row: 5, reason: 'in_bank' }]);
-    expect(preview.errors.map((e) => [e.row, e.column])).toEqual([[6, 'chapter_number'], [7, 'correct'], [8, 'board_year']]);
+    expect(preview.errors.map((e) => [e.row, e.column])).toEqual([[6, 'chapter_number'], [7, 'correct']]);
     expect(buildErrorReportCsv(preview.errors)).toContain('6,chapter_number,Chapter 9 does not exist');
 
     const result = ok(await questionActions.commitImport({ importToken: preview.importToken as string, defaultStatus: 'draft' }));
-    expect(result).toEqual({ imported: 2, duplicatesSkipped: 2, invalid: 3 });
+    expect(result).toEqual({ imported: 3, duplicatesSkipped: 2, invalid: 2 });
     const imported = await searchQuestions({ q: s, status: ['draft'] });
-    expect(imported.total).toBe(2);
+    expect(imported.total).toBe(3);
     const first = imported.items.find((q) => q.stem.includes('প্রশ্ন ১'));
     expect(first?.correct_option).toBe('A');
     expect(first?.topic?.name_en).toBe(`New Topic ${s}`);
-    expect(first?.tags.map((t) => t.name).sort()).toEqual([`${s}-t1`, `${s}-t2`]);
+    expect(first).not.toHaveProperty('tags');
     for (const q of imported.items) trackQuestion(q.id);
 
     expect(await questionActions.commitImport({ importToken: preview.importToken as string, defaultStatus: 'draft' })).toMatchObject({
       ok: false, error: { code: 'NOT_FOUND' },
     });
+  });
+
+  it('new 10-column template: imports without a legacy warning', async () => {
+    const s = `new-${crypto.randomUUID().slice(0, 8)}`;
+    const preview = ok(await questionActions.previewImport(csvFile([`${bank.slug},1,,"${s} নতুন",a,b,c,d,B,`], header)));
+    expect(preview).toMatchObject({ total: 1, valid: 1, invalid: 0, duplicates: 0, ignoredColumns: [] });
+    ok(await questionActions.commitImport({ importToken: preview.importToken as string, defaultStatus: 'draft' }));
+    for (const q of (await searchQuestions({ q: s, status: ['draft'] })).items) trackQuestion(q.id);
   });
 
   it('rejects wrong headers, too many rows, and unsupported files', async () => {
@@ -187,11 +189,13 @@ describe('bulk import (P2.14)', () => {
   });
 
   it('templates round-trip through the parser (CSV and XLSX)', async () => {
-    const csvRows = await parseImportFile({ name: 't.csv', bytes: new TextEncoder().encode(buildTemplateCsv()).buffer as ArrayBuffer });
-    const xlsxRows = await parseImportFile({ name: 't.xlsx', bytes: await buildTemplateXlsx() });
-    expect(csvRows).toHaveLength(1);
-    expect(xlsxRows[0]).toEqual(csvRows[0]);
-    expect(csvRows[0]?.stem).toContain('এর দশমিক মান');
+    const csv = await parseImportFile({ name: 't.csv', bytes: new TextEncoder().encode(buildTemplateCsv()).buffer as ArrayBuffer });
+    const xlsx = await parseImportFile({ name: 't.xlsx', bytes: await buildTemplateXlsx() });
+    expect(buildTemplateCsv().split('\n')[0]?.replace(/^\uFEFF/, '')).toBe(header);
+    expect(csv.rows).toHaveLength(1);
+    expect(csv.ignoredColumns).toEqual([]);
+    expect(xlsx.rows[0]).toEqual(csv.rows[0]);
+    expect(csv.rows[0]?.stem).toContain('এর দশমিক মান');
   });
 });
 

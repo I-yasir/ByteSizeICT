@@ -798,11 +798,8 @@
       "addTopic": "Add topic",
       "addSubject": "Add subject",
       "deleteTopic": "Delete {name}",
-      "deleteTag": "Delete {name}",
       "deleted": "Deleted",
       "saved": "Saved",
-      "tags": "Tags",
-      "newTag": "New tag",
       "add": "Add",
       "dialog": {
         "subject": "Subject",
@@ -828,27 +825,12 @@
       "search": "Search question text",
       "chapter": "Chapter",
       "allChapters": "All chapters",
-      "difficulty": "Difficulty",
-      "allDifficulties": "All difficulties",
-      "difficulties": {
-        "easy": "Easy",
-        "medium": "Medium",
-        "hard": "Hard"
-      },
-      "type": "Type",
-      "allTypes": "All types",
-      "types": {
-        "knowledge": "Knowledge",
-        "application": "Application",
-        "multi_point": "Multi-point"
-      },
       "sort": "Sort",
       "sorts": {
         "newest": "Newest",
         "most_used": "Most used",
         "lowest_correct": "Lowest % correct"
       },
-      "tags": "Tags",
       "status": "Status",
       "statuses": {
         "draft": "Draft",
@@ -859,7 +841,6 @@
       "cols": {
         "stem": "Question",
         "chapter": "Chapter / topic",
-        "difficulty": "Difficulty",
         "used": "Used",
         "correct": "% correct",
         "status": "Status",
@@ -869,9 +850,6 @@
       "duplicate": "Duplicate",
       "duplicated": "Copy created",
       "selected": "{n} selected",
-      "chooseTag": "Choose a tag",
-      "addTag": "Add tag",
-      "removeTag": "Remove tag",
       "setStatus": {
         "active": "Activate",
         "draft": "Set draft",
@@ -900,29 +878,12 @@
       "correct": "Correct",
       "optionRequired": "Enter text or add an image.",
       "explanation": "Explanation / solution",
-      "difficulty": "Difficulty",
-      "difficulties": {
-        "easy": "Easy",
-        "medium": "Medium",
-        "hard": "Hard"
-      },
-      "type": "Type",
-      "types": {
-        "knowledge": "Knowledge",
-        "application": "Application",
-        "multi_point": "Multi-point"
-      },
-      "source": "Source (e.g. Dhaka Board)",
-      "boardYear": "Year",
       "status": "Status",
       "statuses": {
         "draft": "Draft",
         "active": "Active",
         "archived": "Archived"
       },
-      "tags": "Tags",
-      "newTag": "New tag",
-      "addTag": "Add tag",
       "save": "Save",
       "saveAnother": "Save & add another",
       "cancel": "Cancel",
@@ -963,7 +924,8 @@
       "nothingToImport": "There are no valid rows to import.",
       "done": "Imported {n} questions.",
       "doneDetail": "Skipped {d} duplicates and {e} invalid rows.",
-      "toBank": "Go to the question bank"
+      "toBank": "Go to the question bank",
+      "legacyColumns": "These columns from the old template are no longer used and were ignored: {columns}."
     },
     "exams": {
       "title": "Exams",
@@ -1022,8 +984,6 @@
       "bank": "Question bank",
       "chapter": "Chapter",
       "allChapters": "All chapters",
-      "difficulty": "Difficulty",
-      "allDifficulties": "All difficulties",
       "search": "Search",
       "add": "Add",
       "added": "Added",

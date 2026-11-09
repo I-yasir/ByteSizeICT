@@ -15,7 +15,7 @@ import { Banner } from '@/components/ui/misc';
 import { notify } from '@/components/ui/toast';
 import { useErrorMessage } from '@/components/ui/use-error-message';
 import { createMediaUploadUrl, createQuestion, previewQuestion, updateQuestion } from '@/features/questions/actions';
-import { upsertTag, upsertTopic } from '@/features/taxonomy/actions';
+import { upsertTopic } from '@/features/taxonomy/actions';
 import type { Taxonomy } from '@/features/taxonomy/queries';
 import { cn } from '@/lib/utils';
 
@@ -31,12 +31,7 @@ type Form = {
   correctOption: Key;
   explanation: string;
   explanationImagePath: string | null;
-  difficulty: 'easy' | 'medium' | 'hard';
-  qtype: 'knowledge' | 'application' | 'multi_point';
-  source: string;
-  boardYear: string;
   status: 'draft' | 'active' | 'archived';
-  tagIds: string[];
 };
 
 export type EditorInitial = {
@@ -50,12 +45,7 @@ export type EditorInitial = {
   correct_option: Key;
   explanation: string | null;
   explanation_image_path: string | null;
-  difficulty: Form['difficulty'];
-  qtype: Form['qtype'];
-  source: string | null;
-  board_year: number | null;
   status: Form['status'];
-  tagIds: string[];
 };
 
 function fromInitial(q: EditorInitial | null, fallbackChapter: string): Form {
@@ -63,8 +53,7 @@ function fromInitial(q: EditorInitial | null, fallbackChapter: string): Form {
     return {
       chapterId: fallbackChapter, topicId: '', stem: '', stemImagePath: null,
       options: { A: '', B: '', C: '', D: '' }, optionImages: { A: null, B: null, C: null, D: null },
-      correctOption: 'A', explanation: '', explanationImagePath: null, difficulty: 'medium', qtype: 'knowledge',
-      source: '', boardYear: '', status: 'draft', tagIds: [],
+      correctOption: 'A', explanation: '', explanationImagePath: null, status: 'draft',
     };
   }
   return {
@@ -72,8 +61,7 @@ function fromInitial(q: EditorInitial | null, fallbackChapter: string): Form {
     options: { A: q.option_a, B: q.option_b, C: q.option_c, D: q.option_d },
     optionImages: { A: q.option_a_image_path, B: q.option_b_image_path, C: q.option_c_image_path, D: q.option_d_image_path },
     correctOption: q.correct_option, explanation: q.explanation ?? '', explanationImagePath: q.explanation_image_path,
-    difficulty: q.difficulty, qtype: q.qtype, source: q.source ?? '', boardYear: q.board_year ? String(q.board_year) : '',
-    status: q.status, tagIds: q.tagIds,
+    status: q.status,
   };
 }
 
@@ -86,13 +74,11 @@ export function QuestionEditor({ taxonomy, initial, usage }: { taxonomy: Taxonom
   const chapters = useMemo(() => taxonomy.subjects.flatMap((s) => s.chapters.map((c) => ({ ...c, subject: s.name_en }))), [taxonomy]);
   const [form, setForm] = useState<Form>(() => fromInitial(initial, chapters[0]?.id ?? ''));
   const [topics, setTopics] = useState(() => chapters.flatMap((c) => c.topics.map((tp) => ({ ...tp, chapterId: c.id }))));
-  const [tags, setTags] = useState(taxonomy.tags);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [duplicateId, setDuplicateId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [preview, setPreview] = useState<{ stemHtml: string; optionsHtml: string[]; explanationHtml: string; imageUrls: Record<string, string> } | null>(null);
   const [newTopic, setNewTopic] = useState('');
-  const [newTag, setNewTag] = useState('');
 
   const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm((f) => ({ ...f, [key]: value }));
   const imagePaths = [form.stemImagePath, ...KEYS.map((k) => form.optionImages[k]), form.explanationImagePath].filter((p): p is string => Boolean(p));
@@ -132,12 +118,7 @@ export function QuestionEditor({ taxonomy, initial, usage }: { taxonomy: Taxonom
       correctOption: form.correctOption,
       explanation: form.explanation || null,
       explanationImagePath: form.explanationImagePath,
-      difficulty: form.difficulty,
-      qtype: form.qtype,
-      source: form.source || null,
-      boardYear: form.boardYear ? Number(form.boardYear) : null,
       status: form.status,
-      tagIds: form.tagIds,
     };
   }
 
@@ -151,7 +132,7 @@ export function QuestionEditor({ taxonomy, initial, usage }: { taxonomy: Taxonom
       setDuplicateId(null);
       notify.success(t('saved'));
       if (mode === 'another') {
-        setForm((f) => ({ ...fromInitial(null, f.chapterId), topicId: f.topicId, difficulty: f.difficulty, qtype: f.qtype, status: f.status, tagIds: f.tagIds }));
+        setForm((f) => ({ ...fromInitial(null, f.chapterId), topicId: f.topicId, status: f.status }));
         if (initial) router.push('/admin/questions/new');
       } else if (!initial) {
         router.replace(`/admin/questions/${result.data.id}`);
@@ -282,50 +263,8 @@ export function QuestionEditor({ taxonomy, initial, usage }: { taxonomy: Taxonom
           {imageButton(form.explanationImagePath, (path) => set('explanationImagePath', path), t('addImage'))}
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label={t('difficulty')}>{(p) => <Select {...p} value={form.difficulty} onChange={(e) => set('difficulty', e.target.value as Form['difficulty'])}>{(['easy', 'medium', 'hard'] as const).map((d) => <option key={d} value={d}>{t(`difficulties.${d}`)}</option>)}</Select>}</Field>
-            <Field label={t('type')}>{(p) => <Select {...p} value={form.qtype} onChange={(e) => set('qtype', e.target.value as Form['qtype'])}>{(['knowledge', 'application', 'multi_point'] as const).map((d) => <option key={d} value={d}>{t(`types.${d}`)}</option>)}</Select>}</Field>
-            <Field label={t('source')} optionalLabel={t('optional')}>{(p) => <Input {...p} value={form.source} maxLength={120} onChange={(e) => set('source', e.target.value)} />}</Field>
-            <Field label={t('boardYear')} optionalLabel={t('optional')} error={errors.boardYear}>{(p) => <Input {...p} type="number" min={2000} max={2100} value={form.boardYear} onChange={(e) => set('boardYear', e.target.value)} />}</Field>
             <Field label={t('status')}>{(p) => <Select {...p} value={form.status} onChange={(e) => set('status', e.target.value as Form['status'])}>{(['draft', 'active', 'archived'] as const).map((d) => <option key={d} value={d}>{t(`statuses.${d}`)}</option>)}</Select>}</Field>
           </div>
-
-          <fieldset>
-            <legend className="mb-2 text-sm font-medium text-fg">{t('tags')}</legend>
-            <div className="flex flex-wrap gap-2">
-              {tags.map((tag) => {
-                const on = form.tagIds.includes(tag.id);
-                return (
-                  <button
-                    key={tag.id}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => set('tagIds', on ? form.tagIds.filter((id) => id !== tag.id) : [...form.tagIds, tag.id])}
-                    className={cn('h-9 rounded-full border px-3 text-sm', on ? 'border-primary bg-primary-soft text-primary' : 'border-border-strong text-fg-muted')}
-                  >
-                    {tag.name}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-2 flex gap-2">
-              <Input value={newTag} onChange={(e) => setNewTag(e.target.value)} placeholder={t('newTag')} aria-label={t('newTag')} className="h-10" maxLength={40} />
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={!newTag.trim()}
-                onClick={async () => {
-                  const result = await run(() => upsertTag({ name: newTag }), { refresh: false });
-                  if (result.ok) {
-                    setTags((list) => [...list, { id: result.data.id, name: newTag }]);
-                    set('tagIds', [...form.tagIds, result.data.id]);
-                    setNewTag('');
-                  }
-                }}
-              >
-                {t('addTag')}
-              </Button>
-            </div>
-          </fieldset>
         </Card>
         <div className="sticky bottom-0 z-sticky -mx-4 flex flex-wrap gap-2 border-t border-border bg-surface p-4 sm:mx-0 sm:rounded-lg">
           <Button loading={pending} onClick={() => save('stay')}>{t('save')}</Button>

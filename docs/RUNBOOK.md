@@ -51,6 +51,8 @@ openssl rand -hex 32      # CRON_SECRET  (shared by Vercel and Supabase Vault)
    pnpm exec supabase db push
    ```
 
+   > **Local stack after linking (found 2026-11-09):** `supabase link` saves the cloud project's service versions in `supabase/.temp/` (`postgres-version`, `storage-version`, `storage-migration`, `gotrue-version`, `rest-version`). The pinned CLI (2.54.11) then starts a local stack that mixes those with its own older images, and Storage fails on a fresh volume (`Migration lifecycle-writer-coordination not found`). Keep `project-ref` and `pooler-url` (needed for `db push`) and move the five version files to `supabase/.temp/_linked-versions/` before `pnpm db:start`/`db:reset`.
+
    `db push` applies `supabase/migrations/0001…0013` in order. It never runs `seed.sql`. **From this point on, never edit an applied migration**: add a new numbered file.
 6. **Verify** in the SQL editor:
 
@@ -233,6 +235,17 @@ Expect `RESTORE OK: <n> tables, <m> rows match the backup.`
 **5. Clean up:** `rm .env.production.local`; copy the backup folder to encrypted off-site storage (keep the last 12); never commit it.
 
 **Restoring production** (only after a real incident): create a fresh Supabase project (or reset the schema), then apply `roles.sql`, `schema.sql`, and `data.sql` with `SET session_replication_role = replica;` (exactly what `scripts/restore-check.sh` does), upload the saved Storage files back into their buckets, and re-create what dumps do not contain: the pg_cron jobs (re-run `supabase/migrations/0012_cron.sql` and the cleanup job from `0013`) and the Vault secrets (§2.5). If you upgrade to Pro later, PITR (*Database → Backups → Point in time*) replaces most of this.
+
+---
+
+## 8a. Question import guide (admins)
+
+*Admin → Question Bank → Import* (R1.1 V2-A; images in Excel arrive with V2-C):
+
+- **Columns** (download the template from the import page): `subject` (optional slug; default = first subject), `chapter_number`, `topic` (created if missing), `stem`, `option_a`–`option_d`, `correct` (A–D), `explanation`.
+- **Removed in R1.1:** difficulty, type, source, board year and tags no longer exist anywhere in the question bank. Old spreadsheets that still have those columns import normally; the preview shows a notice that those columns were ignored.
+- **Limits today:** `.csv` or `.xlsx`, ≤ 2,000 rows, text only. Note: until V2-C ships direct-to-storage uploads, files larger than about 1 MB fail to upload (Server Action body limit) — split big files.
+- Duplicates (same normalised text as another question or another row) are skipped; invalid rows are listed with row number and column and can be downloaded as a CSV.
 
 ---
 

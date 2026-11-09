@@ -6,20 +6,20 @@
 > **Hard constraint (owner):** everything must work on the **free tiers** of Vercel (Hobby), Supabase, Resend and Google Cloud (§3).
 
 ## Current Step
-`V2.04` — Migration `0014_v2_drop_question_meta.sql` (start of V2-A; begins only when the owner says so).
+`V2.10` — Migration `0015_v2_question_delete.sql` (phase V2-B). **Waiting for the owner's "go".**
 
 ## Progress
 | Phase | Steps | Done |
 | --- | --- | --- |
 | V2-0 Decisions, docs, safety | 4 | 4 |
-| V2-A Question model cleanup | 6 | 0 |
+| V2-A Question model cleanup | 6 | 6 |
 | V2-B Question deletion | 4 | 0 |
 | V2-C Excel import with images | 5 | 0 |
 | V2-D Plan routines (PDF) + plan buttons | 5 | 0 |
 | V2-E Exam audiences by plan | 6 | 0 |
 | V2-F Public site, routine & enrollment flow | 7 | 0 |
 | V2-G Regression & rollout | 4 | 0 |
-| **Total** | **41** | **4** |
+| **Total** | **41** | **10** |
 
 ---
 
@@ -96,18 +96,18 @@ Nothing in V2 may require a paid plan. Design rules that follow:
   Verify: restored row counts match production. Done: 2026-11-09 — Verified: owner ran `pnpm backup:db` on production (`backups/20261109T010355Z`: 22 public tables, 140 rows) and `backup-storage.ts` (`question-media` 5 files / 350 KB, `public-assets` 0; saved in `backups/2026-9-11/storage`); `pnpm restore:check backups/20261109T010355Z` → **RESTORE OK: 22 public tables, 140 rows match the backup.** Found & fixed during the drill: Supabase-managed schemas (`auth`, `storage`, `supabase_functions`) differ between cloud and the local stack (`auth.audit_log_entries.ip_address`), so `backup-db.sh` now dumps data from `public` only and `restore-check.sh` restores/compares `public` only (also works for the first backup). Tooling: `scripts/backup-db.sh` (`pnpm backup:db`), `scripts/backup-storage.ts`, `scripts/restore-check.sh` (`pnpm restore:check`); `/backups/` git-ignored; RUNBOOK §8 rewritten. Per D11 the backup is a safety net only.
 
 ### V2-A Question model cleanup (CR10)
-- [ ] **V2.04 Migration `0014_v2_drop_question_meta.sql`**: drop `questions.difficulty/qtype/source/board_year`, tables `question_tags`, `tags`, enums `difficulty_level`/`question_type`, function `set_question_tags`; update pgTAP; `db:types`.
-  Verify: `db:reset && db:types && db:test` green. Done:
-- [ ] **V2.05 Server code**: questions schemas/service/queries/actions (create, update, duplicate, search, sort, bulk), `searchBank`, taxonomy (tags removed), exam builder bank filters, seed + test fixtures.
-  Verify: `pnpm typecheck` + integration tests green; `grep` finds no references. Done:
-- [ ] **V2.06 Admin UI**: editor fields, list filters/chips/columns, bulk tag bar, taxonomy tag manager, builder difficulty filter; bn + en keys removed.
-  Verify: E2E admin/editor specs green; `check:i18n` green. Done:
-- [ ] **V2.07 Import template + parser**: columns reduced; legacy columns (difficulty, type, source, board_year, tags) accepted and ignored with a preview warning (D9).
-  Verify: legacy 15-column fixture and the new template import with exact counts. Done:
-- [ ] **V2.08 RUNBOOK/admin-guide touch-ups** for the removed fields.
-  Verify: reviewed. Done:
-- [ ] **V2.09 Gate A** `pnpm run ci`.
-  Verify: CI output in Done. Done:
+- [x] **V2.04 Migration `0014_v2_drop_question_meta.sql`**: drop `questions.difficulty/qtype/source/board_year`, tables `question_tags`, `tags`, enums `difficulty_level`/`question_type`, function `set_question_tags`; update pgTAP; `db:types`.
+  Verify: `db:reset && db:types && db:test` green. Done: 2026-11-09 — Verified: `supabase/migrations/0014_v2_drop_question_meta.sql` drops `set_question_tags`, `question_tags`, `tags`, the 4 columns (index goes with `difficulty`) and both enums; it also **rebuilds `questions_updated_at`**, whose column list (0004) depended on the dropped columns (first apply failed with SQLSTATE 2BP01). Fresh `supabase start` applies 0001–0014 + seed; `db:types` → 0 references; `phase2.test.sql` swaps the tag test for 5 absence checks (tables, columns, enums, function); `db:test` 108/108 PASS.
+- [x] **V2.05 Server code**: questions schemas/service/queries/actions (create, update, duplicate, search, sort, bulk), `searchBank`, taxonomy (tags removed), exam builder bank filters, seed + test fixtures.
+  Verify: `pnpm typecheck` + integration tests green; `grep` finds no references. Done: 2026-11-09 — Verified: questions schemas/service/queries/actions (fields, `bulkTag`, tag joins/filters, `searchBank` difficulty filter removed; `getQuestionForEdit` returns the row), `exams/queries.ts` builder select, taxonomy (tags removed from schemas/service/actions/queries), `seed.sql` (40 rows stripped of the 4 values; `tags`/`question_tags` inserts removed). `typecheck` 0 errors; grep finds only the intentional legacy-CSV fixtures.
+- [x] **V2.06 Admin UI**: editor fields, list filters/chips/columns, bulk tag bar, taxonomy tag manager, builder difficulty filter; bn + en keys removed.
+  Verify: E2E admin/editor specs green; `check:i18n` green. Done: 2026-11-09 — Verified: question editor (difficulty/type/source/board year/tags fields + inline tag creation removed), list (filters, difficulty column, bulk tag bar), builder bank (difficulty filter), taxonomy page (tag manager; now single column), 25 obsolete i18n keys removed from bn + en; import wizard shows the legacy-columns notice. `check:i18n` 918 keys in sync; `lint` 0 errors.
+- [x] **V2.07 Import template + parser**: columns reduced; legacy columns (difficulty, type, source, board_year, tags) accepted and ignored with a preview warning (D9).
+  Verify: legacy 15-column fixture and the new template import with exact counts. Done: 2026-11-09 — Verified: `import.ts` template = 10 columns; `LEGACY_IMPORT_COLUMNS` (difficulty, type, source, board_year, tags) accepted, stripped from rows and returned as `ImportPreview.ignoredColumns` (unknown columns still `IMPORT_BAD_HEADERS`). Integration: legacy 15-column file → total 7 / valid 3 / invalid 2 / duplicates 2, `ignoredColumns` = the 5, a `board_year=1999` row (rejected in R1) now imports; new 10-column file → `ignoredColumns: []`; CSV/XLSX template round-trip asserts the 10-column header. E2E `import.spec.ts` asserts the on-screen notice.
+- [x] **V2.08 RUNBOOK/admin-guide touch-ups** for the removed fields.
+  Verify: reviewed. Done: 2026-11-09 — Verified: RUNBOOK §8a admin import guide (columns, removed fields, legacy notice, current limits incl. the ~1 MB upload limit until V2-C) and a §2 note on the local stack after `supabase link` (move the 5 version files in `supabase/.temp/` to `_linked-versions/`).
+- [x] **V2.09 Gate A** `pnpm run ci`.
+  Verify: CI output in Done. Done: 2026-11-09 — Verified: `pnpm run ci` exit 0 — lint 0 errors (1 known TanStack warning), typecheck, vitest **253/253** (17 files), pgTAP **108/108**, i18n 918 keys, answer-leak, Playwright **130 passed** (mobile + desktop; exam route JS 166.5 KB < 180 KB), secrets on the fresh build.
 
 ### V2-B Question deletion (CR2)
 - [ ] **V2.10 Migration `0015_v2_question_delete.sql`**: `questions.deleted_at`, `deleted_by`; partial indexes exclude deleted rows; `delete_questions(p_admin, p_ids uuid[])` → `QUESTION_IN_USE` (detail lists exam ids/titles) if any id is in an exam with phase `draft|scheduled|live|late_window`; otherwise soft delete when referenced by any exam or answer, hard delete when unreferenced; one audit row per question (`question.delete`, mode soft/hard); returns hard-deleted image paths. Duplicate-hash checks and `set_exam_questions` ignore/reject deleted questions. pgTAP.
@@ -213,3 +213,6 @@ Production gets the whole history (0001–0019) at V2.38 on a reset, empty datab
 | 2026-11-09 | V2.02 | Commit messages for V2 steps: `V2.<nn>: <summary>` unless the owner specifies one. | Mirrors the V1 `P<id>` convention. | CLAUDE.md §5 |
 | 2026-11-09 | V2.03 | Backups dump `public` data only; restore drill restores/compares `public` only. | The drill on the production backup failed on Supabase-managed `auth` tables whose columns differ between cloud and the local stack; the app does not use those schemas. | RUNBOOK §8 |
 | 2026-11-09 | D11 | V2 production starts clean (reset + full migration history, no seed, bootstrap, two admins). | Owner decision: V1 was a trial; no data to keep. | 07 §2, V2.37–V2.38 |
+| 2026-11-09 | V2.04 | Migration 0014 also drops and re-creates the `questions_updated_at` trigger. | Its column list (0004) referenced the dropped columns, which blocks `drop column` (2BP01). | Schema §5 |
+| 2026-11-09 | V2.07 | Legacy import columns are stripped in `parseImportFile` and reported as `ImportPreview.ignoredColumns`; the wizard shows them in an `info` banner. | D9; UI Spec §7.13 has no warning banner variant (offline/info/danger). | AppFlow §6.7 |
+| 2026-11-09 | V2.04 | Local dev: the 5 service-version files written by `supabase link` were moved to `supabase/.temp/_linked-versions/`; the local Docker volumes were recreated (dev data only). | The mixed versions made Storage crash on a fresh volume (`Migration lifecycle-writer-coordination not found`); the old DB volume had lost its config directory. | RUNBOOK §2 |
