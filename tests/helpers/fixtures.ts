@@ -180,6 +180,14 @@ export async function makeExam(input: {
   return exam.id;
 }
 
+/** A fresh production database has no trial exam until the admin publishes one: create one if needed. */
+export async function ensureSampleExam(): Promise<void> {
+  const existing = await testDb.from('exams').select('id').eq('is_sample', true).eq('status', 'published').gt('question_count', 0).limit(1);
+  if (existing.data?.length) return;
+  const bank = await makeQuestionBank(3);
+  await makeExam({ questionIds: bank.questions.map((q) => q.id), isSample: true });
+}
+
 export function trackExam(id: string) {
   created.exams.push(id);
 }

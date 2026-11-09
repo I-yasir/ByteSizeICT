@@ -53,19 +53,19 @@ openssl rand -hex 32      # CRON_SECRET  (shared by Vercel and Supabase Vault)
 
    > **Local stack after linking (found 2026-11-09):** `supabase link` saves the cloud project's service versions in `supabase/.temp/` (`postgres-version`, `storage-version`, `storage-migration`, `gotrue-version`, `rest-version`). The pinned CLI (2.54.11) then starts a local stack that mixes those with its own older images, and Storage fails on a fresh volume (`Migration lifecycle-writer-coordination not found`). Keep `project-ref` and `pooler-url` (needed for `db push`) and move the five version files to `supabase/.temp/_linked-versions/` before `pnpm db:start`/`db:reset`.
 
-   `db push` applies `supabase/migrations/0001…0013` in order. It never runs `seed.sql`. **From this point on, never edit an applied migration**: add a new numbered file.
+   `db push` applies `supabase/migrations/0001…0019` in order (R1.1). It never runs `seed.sql`. **From this point on, never edit an applied migration**: add a new numbered file.
 6. **Verify** in the SQL editor:
 
    ```sql
-   select count(*) from pg_tables where schemaname = 'public' and rowsecurity;   -- 22 (every table)
+   select count(*) from pg_tables where schemaname = 'public' and rowsecurity;   -- 20 (every table, R1.1)
    select jobname, schedule from cron.job order by jobname;                         -- cleanup-daily, cleanup-import-batches, finalize-overdue-attempts, import-cleanup-kick (R1.1), outbox-kick
-   select id, public from storage.buckets order by id;                             -- import-uploads (false, R1.1), public-assets (true), question-media (false)
+   select id, public from storage.buckets order by id;                             -- import-uploads (false), plan-routines (true), public-assets (true), question-media (false)
    ```
 
 7. **Vault secrets** used by the `outbox-kick` cron job (Schema §8.5). Use the production site URL (no trailing slash) and the same `CRON_SECRET` you give Vercel:
 
    ```sql
-   select vault.create_secret('https://bytesizeict.com', 'site_url');
+   select vault.create_secret('https://bytesizeict.me', 'site_url');
    select vault.create_secret('<CRON_SECRET>', 'cron_secret');
    ```
 
@@ -234,7 +234,7 @@ Expect `RESTORE OK: <n> tables, <m> rows match the backup.`
 
 **5. Clean up:** `rm .env.production.local`; copy the backup folder to encrypted off-site storage (keep the last 12); never commit it.
 
-**Restoring production** (only after a real incident): create a fresh Supabase project (or reset the schema), then apply `roles.sql`, `schema.sql`, and `data.sql` with `SET session_replication_role = replica;` (exactly what `scripts/restore-check.sh` does), upload the saved Storage files back into their buckets, and re-create what dumps do not contain: the pg_cron jobs (re-run `supabase/migrations/0012_cron.sql` and the cleanup job from `0013`) and the Vault secrets (§2.5). If you upgrade to Pro later, PITR (*Database → Backups → Point in time*) replaces most of this.
+**Restoring production** (only after a real incident): create a fresh Supabase project (or reset the schema), then apply `roles.sql`, `schema.sql`, and `data.sql` with `SET session_replication_role = replica;` (exactly what `scripts/restore-check.sh` does), upload the saved Storage files back into their buckets, and re-create what dumps do not contain: the pg_cron jobs (re-run `supabase/migrations/0012_cron.sql`, the cleanup job from `0013` and `import-cleanup-kick` from `0016`) and the Vault secrets (§2.5). If you upgrade to Pro later, PITR (*Database → Backups → Point in time*) replaces most of this.
 
 ---
 
@@ -312,11 +312,53 @@ Repeat §2–§6 on a separate Supabase project + Vercel preview environment nam
 | §6 `admin:create` | works; **fixed** the env-loading command above |
 | §7 smoke (Playwright against a production build on that stack, fresh pepper/cron secret) | 71/71: enroll → approve → emailed PIN → login → forced PIN change, login security, sessions, enrollment validation, RLS over HTTP, headers/cookies, exam builder/locks, exam runtime (offline, timing, ordering), access modes, results gates, leak test, import, JS budget |
 
+**R1.1 clean-start rehearsal (done 2026-11-09, Plan V2.37).** Same procedure on the local stack reset with `--no-seed`:
+
+| Step | Result |
+| --- | --- |
+| Migrations on an empty DB | 0001–0019 applied cleanly |
+| §2.6 verification SQL | 20 RLS tables (of 20) · 5 cron jobs (`cleanup-daily`, `cleanup-import-batches`, `finalize-overdue-attempts`, `import-cleanup-kick`, `outbox-kick`) · buckets `import-uploads` private, `plan-routines` public, `public-assets` public, `question-media` private · 0 students/admins/questions/exams/plans |
+| `bootstrap.prod.sql` | 1 subject · 6 chapters · 12 topics · 3 plans (no routine PDF yet → admin warning) · 6 settings |
+| Vault + cron | `site_url`, `cron_secret` (fresh secret); `outbox-kick` → drain route HTTP 200 ×5; every cron run succeeded |
+| §6 `create-admin.ts` ×2 (fresh pepper) | both admins active |
+| Full Playwright suite on that DB (production build, fresh pepper + cron secret) | **147/147** passed (mobile + desktop), exam route JS 166.5 KB |
+
 Not covered locally (needs the real accounts): Supabase cloud `db push` and dashboard settings, Vercel env/domain/region, Resend DNS + real delivery, the Google service account and sheet.
 
 ---
 
-## 12. Open release blockers (as of 2026-11-07)
+## 12. Open release blockers (as of 2026-11-07; see §13 for R1.1)
 
 1. **Staging dry run (P4.23)**: §2–§7 rehearsed locally (§11) but not yet on a real staging project.
 2. **Staging measurements (P4.24)**: Lighthouse mobile and the 200-VU k6 save test need a staging deployment. (Exam route JS budget met locally: 166.5 KB < 180 KB.)
+
+---
+
+## 13. R1.1 clean-start cut-over (Plan V2.38, decisions D10/D11)
+
+V1 was a trial; production restarts **empty** on the full migration history and the V2 app is deployed right after. Do the steps **in this order** in one sitting (the V1 app breaks against the V2 schema between steps 3 and 9; there are no users, so that window is acceptable but keep it short).
+
+1. **Backup** (§8 steps 1–3): `pnpm backup:db`, then `backup-storage.ts` into the same folder. Optional: `pnpm restore:check backups/<timestamp>`.
+2. **Confirm the link** points at production: `cat supabase/.temp/project-ref` (and the dashboard URL).
+3. **Reset the database to 0001–0019 without the dev seed** (prompts for confirmation and the database password; **never** omit `--no-seed`, `seed.sql` has test accounts with a known PIN):
+
+   ```bash
+   pnpm exec supabase db reset --linked --no-seed
+   ```
+
+4. **Verify** (SQL editor): the §2.6 queries (20 RLS tables, 5 cron jobs, 4 buckets) plus
+
+   ```sql
+   select extname from pg_extension order by 1;                                   -- includes citext, pg_cron, pg_net, pgcrypto, supabase_vault
+   select (select count(*) from students) students, (select count(*) from admins) admins, (select count(*) from exams) exams;  -- 0, 0, 0
+   ```
+
+5. **Reference data**: run `supabase/bootstrap.prod.sql` once (SQL editor).
+6. **Vault**: `select name from vault.secrets;` — if `site_url` / `cron_secret` are missing, create them (§2 step 7) with `https://bytesizeict.me` and the Vercel `CRON_SECRET`.
+7. **Old files**: Supabase → Storage → `question-media` → select all folders → Delete (V1 question images; the reset does not touch Storage). Leave `public-assets` (logo) unless you want a fresh logo.
+8. **Admins**: create the two initial admins (§6).
+9. **Deploy**: push `main` to GitHub; Vercel builds and deploys (no new environment variables in R1.1). Watch the deployment log until it is *Ready*.
+10. **Configure** as an admin: each plan → upload its **routine PDF** (the three bootstrap plans show a "No routine PDF" badge until then), payment accounts, contact links, FAQ; publish a **trial exam** (Exam builder → "This is the trial exam").
+11. **Smoke** (§7) plus the R1.1 flows: every *Enroll Now* lands on the plans; plan card **View routine** opens the PDF; `/enroll?plan=…` shows only that plan; Excel import with a picture; delete an unused question; an exam with audience *Students of these plans* is visible to a student of that plan only; `/routine` shows "Your routine" when logged in. Delete the test student afterwards (§7 step 5) and check `select count(*) from students` = 0.
+12. **Free-tier check** (Plan V2.39): Supabase → *Project Settings → Usage*: database size (< 500 MB), Storage (< 1 GB), egress; Vercel → *Usage*: function invocations/duration, bandwidth; Resend → *Emails*: today's count (< 100/day). Record the numbers in `docs/07_Plan_V2.md` (V2.39).
+

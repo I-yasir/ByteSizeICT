@@ -6,7 +6,7 @@
 > **Hard constraint (owner):** everything must work on the **free tiers** of Vercel (Hobby), Supabase, Resend and Google Cloud (§3).
 
 ## Current Step
-`V2.37` — Clean-start rehearsal (D11) (phase V2-G). **Waiting for the owner's "go".**
+`V2.38` — Production clean-start cut-over (D11). **Needs the owner:** RUNBOOK §13 steps 1–8 use the production credentials (database password, Supabase login), which are not on this machine; the push to GitHub (step 9) waits for the owner's explicit OK after step 8.
 
 ## Progress
 | Phase | Steps | Done |
@@ -18,8 +18,8 @@
 | V2-D Plan routines (PDF) + plan buttons | 5 | 5 |
 | V2-E Exam audiences by plan | 6 | 6 |
 | V2-F Public site, routine & enrollment flow | 7 | 7 |
-| V2-G Regression & rollout | 4 | 0 |
-| **Total** | **41** | **37** |
+| V2-G Regression & rollout | 4 | 1 |
+| **Total** | **41** | **38** |
 
 ---
 
@@ -174,8 +174,8 @@ Nothing in V2 may require a paid plan. Design rules that follow:
   Verify: CI output. Done: 2026-11-09 — Verified: `pnpm run ci` exit 0 — lint 0 errors (1 known TanStack warning), typecheck, vitest **270/270** (18 files; the routine-query test became the public-surface test, −1 auth-matrix case for `setFeaturedExam`), pgTAP **165/165** (10 files), i18n 955 keys, answer-leak, Playwright **147 passed**, **exam route JS 166.5 KB < 180 KB**, secrets.
 
 ### V2-G Regression & rollout (D10: single cut-over)
-- [ ] **V2.37 Clean-start rehearsal (D11)**: on an isolated empty local stack, apply 0001–0019 with **no seed**, `bootstrap.prod.sql`, Vault secrets, two admins via `create-admin.ts`, then run the V2 app against it with the full E2E suite (as in the P4.23 rehearsal).
-  Verify: all green on the fresh database. Done:
+- [x] **V2.37 Clean-start rehearsal (D11)**: on an isolated empty local stack, apply 0001–0019 with **no seed**, `bootstrap.prod.sql`, Vault secrets, two admins via `create-admin.ts`, then run the V2 app against it with the full E2E suite (as in the P4.23 rehearsal).
+  Verify: all green on the fresh database. Done: 2026-11-09 — Verified on the local stack reset with `supabase db reset --no-seed`: 0001–0019 applied; §2.6 SQL → 20/20 RLS tables, 5 cron jobs, 4 buckets (`plan-routines` public, `import-uploads`/`question-media` private), 0 students/admins/questions/exams/plans; `bootstrap.prod.sql` → 1/6/12/3/6; Vault `site_url` + fresh `cron_secret` (outbox drain HTTP 200 ×5, all cron runs succeeded); `create-admin.ts` ×2 with a fresh pepper; full Playwright suite against a production build with the fresh pepper/cron secret **147/147** (exam route JS 166.5 KB). Found & fixed: `smoke.spec.ts` and the a11y screenshot test assumed the seeded trial exam → new `ensureSampleExam()` fixture (first run 145/147, then 147/147). Dev DB restored with `pnpm db:reset`; `pnpm run ci` exit 0 afterwards (vitest 270/270, pgTAP 165/165, Playwright 147) after fixing a latent V1 flake (timestamp string compare in `runtime-results.test.ts`). Logs: RUNBOOK §11 table; RUNBOOK §2 numbers updated (20 tables, 4 buckets, 0001–0019) and new §13 cut-over procedure.
 - [ ] **V2.38 Production clean-start cut-over (D11)**: fresh backup (`pnpm backup:db` + `backup-storage.ts`) → reset the production database to migrations 0001–0019 **without the dev seed** (`supabase db reset --linked --no-seed`, or a new empty Supabase project + `supabase db push`; never load `seed.sql`) → verify extensions, cron jobs, buckets, RLS (RUNBOOK §2.6) → `bootstrap.prod.sql` → Vault `site_url`/`cron_secret` (re-create if missing) → empty the old files in `question-media` → create the two initial admins (RUNBOOK §6) → push to GitHub (Vercel deploys) → admin enters plans with routine PDFs, payment accounts, settings → RUNBOOK §7 smoke incl. the new flows (plan audience, routine PDFs, Excel image import, delete, enroll flow).
   Verify: smoke checklist in Done; `select count(*) from students` = 0 before the first real enrollment; Vercel logs clean. Done:
 - [ ] **V2.39 Free-tier check**: Supabase usage (DB < 500 MB, Storage < 1 GB), Vercel Hobby usage, Resend daily volume — all within free limits.
@@ -234,3 +234,6 @@ Production gets the whole history (0001–0019) at V2.38 on a reset, empty datab
 | 2026-11-09 | V2.32 | The footer gains an Enroll link (→ `/#pricing`). | CR8 lists the footer among the entry points; it had none. | — |
 | 2026-11-09 | V2.34 | `/routine`'s h1 is "Routine"; sections "Your routine" (students) and "Plan routines". | One page now holds both parts; the old title equalled the plan section heading. | — |
 | 2026-11-09 | V2.31 | `seed.sql` (dev only) drops `is_featured` and renames the sample exam to "ট্রায়াল পরীক্ষা". | The column no longer exists; D8 copy. Production never loads the seed (D11). | — |
+| 2026-11-09 | V2.37 | Rehearsal ran on the dev stack reset with `--no-seed` (then restored), not on a second stack with separate ports. | Same empty-database state as a fresh production project; the dev data is disposable. | RUNBOOK §11 |
+| 2026-11-09 | V2.37 | E2E specs that need a trial exam create one when none is published (`ensureSampleExam`). | The suite must pass on a fresh production-like database (as the import spec already did). | — |
+| 2026-11-09 | V2.38 | The production cut-over is run by the owner (RUNBOOK §13); the agent pushes to GitHub only after the owner confirms steps 1–8. | Production credentials are not on this machine, and the reset is irreversible; pushing before the reset would deploy V2 against the V1 schema. | RUNBOOK §13 |

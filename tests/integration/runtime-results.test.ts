@@ -403,10 +403,11 @@ describe('cards, lobby, results gates (P2.17, P2.22)', () => {
 
     const hidden = await getAttemptResult(attemptId, { id: student.id, accessState: 'active' });
     if (hidden.kind !== 'result') throw new Error(hidden.kind);
-    expect(hidden.result.rank).toEqual({
-      visible: false,
-      publishAt: later.toISOString().replace('Z', '+00:00'),
-    });
+    // Compare instants: Postgres trims trailing zeros (".12+00:00" vs JS ".120Z"), which made the
+    // string comparison fail about one run in ten.
+    expect(hidden.result.rank).toMatchObject({ visible: false });
+    const publishAt = (hidden.result.rank as { publishAt?: string | null }).publishAt;
+    expect(Date.parse(publishAt ?? '')).toBe(later.getTime());
     expect(hidden.result.answersVisible).toBe(false);
     expect(hidden.result.questions[0]).toMatchObject({
       selected: 'A',

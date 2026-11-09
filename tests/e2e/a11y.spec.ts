@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { testDb } from '../helpers/db';
-import { makeExam, makeQuestionBank } from '../helpers/fixtures';
+import { ensureSampleExam, makeExam, makeQuestionBank } from '../helpers/fixtures';
 import { attemptRow, createStudent, expect, loginStudent, msg, openAttempt, startAttempt, test } from '../helpers/e2e';
 
 /** P4.21 accessibility (docs/03_UI_Spec.md §9): axe 0 serious/critical, keyboard-only exam, theme screenshots. */
@@ -85,6 +85,7 @@ test('P4.21 Bangla + KaTeX rendering screenshots in both themes', async ({ page,
   const bank = await makeQuestionBank(3);
   const examId = await makeExam({ questionIds: bank.questions.map((q) => q.id) });
   const attemptId = await startAttempt(examId, student.id);
+  await ensureSampleExam();
   for (const scheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme: scheme });
     await openAttempt(page, attemptId);

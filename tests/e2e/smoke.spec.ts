@@ -1,3 +1,4 @@
+import { ensureSampleExam } from '../helpers/fixtures';
 import { expect, msg, test } from '../helpers/e2e';
 
 /** P4.01 harness smoke: public site renders and the trial (sample) exam scores end to end. */
@@ -5,6 +6,8 @@ test('homepage renders and the sample exam completes', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('h1')).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('lang', 'bn');
+
+  await ensureSampleExam(); // self-contained: works on a fresh production database too
 
   await page.goto('/sample');
   const firstQuestion = page.locator('article[data-index="0"]');
