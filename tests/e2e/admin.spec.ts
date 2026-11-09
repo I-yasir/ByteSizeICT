@@ -1,7 +1,7 @@
 import { randomInt } from 'node:crypto';
 import type { Browser } from '@playwright/test';
 import { randomMobile, testDb } from '../helpers/db';
-import { makeExam, makeQuestionBank, trackMobile } from '../helpers/fixtures';
+import { makeExam, makePlan, makeQuestionBank, trackMobile } from '../helpers/fixtures';
 import { createStudent, expect, loginAdmin, loginStudent, msg, startAttempt, test } from '../helpers/e2e';
 
 async function adminPage(browser: Browser) {
@@ -171,3 +171,32 @@ test.describe('R1.1 question deletion (V2.12)', () => {
     await studentContext.close();
   });
 });
+
+test.describe('R1.1 exam audience by plan (V2.26)', () => {
+  test('the builder stores the ticked plans; inactive plans are labelled; the list shows plan chips @desktop', async ({ browser }) => {
+    const bank = await makeQuestionBank(1);
+    const examId = await makeExam({ questionIds: bank.questions.map((q) => q.id), startsAt: new Date(Date.now() + 86_400_000), liveEndsAt: new Date(Date.now() + 90_000_000) });
+    const [planA, planB] = [await makePlan(), await makePlan()];
+    const { context, page } = await adminPage(browser);
+    await page.goto(`/admin/exams/${examId}`);
+    await page.getByRole('tab', { name: msg('admin.builder.tabs.audience') }).click();
+    await page.getByRole('radio', { name: msg('admin.builder.audience.plans') }).check();
+    const save = page.getByRole('button', { name: msg('admin.builder.saveAudience'), exact: true });
+    await expect(save).toBeDisabled();
+    const rowA = page.locator('label', { hasText: planA.code });
+    await expect(rowA.getByText(msg('admin.builder.planInactive'))).toBeVisible();
+    await rowA.getByRole('checkbox').check();
+    await save.click();
+    await expect(page.getByText(msg('admin.builder.savedAudience'))).toBeVisible();
+    const stored = await testDb.from('exam_audience_plans').select('plan_id').eq('exam_id', examId);
+    expect(stored.data?.map((r) => r.plan_id)).toEqual([planA.id]);
+    expect((await testDb.from('exams').select('audience').eq('id', examId).single()).data?.audience).toBe('plans');
+
+    await page.goto('/admin/exams');
+    const item = page.locator('li', { has: page.locator(`a[href="/admin/exams/${examId}"]`) });
+    await expect(item.getByText(planA.code)).toBeVisible();
+    await expect(item.getByText(planB.code)).toHaveCount(0);
+    await context.close();
+  });
+});
+

@@ -6,7 +6,7 @@
 > **Hard constraint (owner):** everything must work on the **free tiers** of Vercel (Hobby), Supabase, Resend and Google Cloud (§3).
 
 ## Current Step
-`V2.24` — Migration `0018_v2_exam_audience_plans.sql` (phase V2-E). **Waiting for the owner's "go".**
+`V2.30` — Homepage (phase V2-F). **Waiting for the owner's "go".**
 
 ## Progress
 | Phase | Steps | Done |
@@ -16,10 +16,10 @@
 | V2-B Question deletion | 4 | 4 |
 | V2-C Excel import with images | 5 | 5 |
 | V2-D Plan routines (PDF) + plan buttons | 5 | 5 |
-| V2-E Exam audiences by plan | 6 | 0 |
+| V2-E Exam audiences by plan | 6 | 6 |
 | V2-F Public site, routine & enrollment flow | 7 | 0 |
 | V2-G Regression & rollout | 4 | 0 |
-| **Total** | **41** | **24** |
+| **Total** | **41** | **30** |
 
 ---
 
@@ -144,18 +144,18 @@ Nothing in V2 may require a paid plan. Design rules that follow:
   Verify: CI output. Done: 2026-11-09 — Verified: `pnpm run ci` exit 0 — lint 0 errors (1 known TanStack warning), typecheck, vitest **271/271** (18 files), pgTAP **148/148** (9 files), i18n 960 keys, answer-leak, Playwright **138 passed** (exam route JS 166.5 KB < 180 KB), secrets. (A first run failed pgTAP "anon sees only active plans" on three `t-…` plans left in the local DB by an earlier failed integration run; removed, re-run green.)
 
 ### V2-E Exam audiences by plan (CR1)
-- [ ] **V2.24 Migration `0018_v2_exam_audience_plans.sql`**: new enum `('all_active','plans')` swapped in for `exam_audience` (existing `selected` → `all_active`); table `exam_audience_plans(exam_id → exams cascade, plan_id → plans restrict, PK)` with RLS forced; drop `exam_assignees`; rewrite `student_is_assigned` (`all_active` → true; `plans` → the student's `plan_id` is among the exam's plans) and `set_exam_audience(p_exam_id, p_audience, p_plan_ids)`; recreate dependants (`student_exam_cards`, `start_attempt`); grants. pgTAP.
-  Verify: pgTAP: both modes, null plan, plan switch, start honours the audience, cards filtered. Done:
-- [ ] **V2.25 Server code**: exams schemas/service/actions (`setExamAudience({audience, planIds})`, publish check "≥ 1 plan when audience = plans"); remove `searchStudentsForAudience` and assignee code; builder queries.
-  Verify: integration tests per mode + auth failure. Done:
-- [ ] **V2.26 Builder Audience tab**: "All active students" / "Students of these plans" (multi-select; inactive plans labelled); exams list shows audience chips.
-  Verify: E2E: a plan-A exam is visible to an A-student and a 404 for a B-student. Done:
-- [ ] **V2.27 Student side**: dashboard Next exam + Routine, `/exams`, lobby, start and results respect the audience (via `student_is_assigned`); update the access-mode/authorization specs (P4.14/P4.15) from "selected" to "plans".
-  Verify: E2E access matrix by plan. Done:
-- [ ] **V2.28 Regression**: admin results, ranks, CSV and the Sheets mirror unchanged.
-  Verify: existing specs green. Done:
-- [ ] **V2.29 Gate E** `pnpm run ci`.
-  Verify: CI output. Done:
+- [x] **V2.24 Migration `0018_v2_exam_audience_plans.sql`**: new enum `('all_active','plans')` swapped in for `exam_audience` (existing `selected` → `all_active`); table `exam_audience_plans(exam_id → exams cascade, plan_id → plans restrict, PK)` with RLS forced; drop `exam_assignees`; rewrite `student_is_assigned` (`all_active` → true; `plans` → the student's `plan_id` is among the exam's plans) and `set_exam_audience(p_exam_id, p_audience, p_plan_ids)`; recreate dependants (`student_exam_cards`, `start_attempt`); grants. pgTAP.
+  Verify: pgTAP: both modes, null plan, plan switch, start honours the audience, cards filtered. Done: 2026-11-09 — Verified: `supabase/migrations/0018_v2_exam_audience_plans.sql`: old enum renamed, new `exam_audience ('all_active','plans')` swapped in (every row → `all_active`), old `set_exam_audience` + type dropped; `exam_audience_plans` (cascade/restrict, RLS forced, service_role only); `exam_assignees` dropped; `student_is_assigned` (plan match via `students.plan_id`) and `set_exam_audience(p_exam_id, p_audience, p_plan_ids)` rewritten with grants. `student_exam_cards`/`start_attempt` call `student_is_assigned`, so they needed no rewrite. New `audience_plans.test.sql` (16): stored counts/dedupe/inactive plan, unknown exam, cards for A/B/no-plan students, `student_is_assigned`, start refused outside the audience and allowed inside, plan switch, all_active clears, targeted plan undeletable, table gone, enum labels; `exams.test.sql`/`phase2.test.sql` moved from `selected` to `plans`. `db:reset && db:types && db:test` 164/164.
+- [x] **V2.25 Server code**: exams schemas/service/actions (`setExamAudience({audience, planIds})`, publish check "≥ 1 plan when audience = plans"); remove `searchStudentsForAudience` and assignee code; builder queries.
+  Verify: integration tests per mode + auth failure. Done: 2026-11-09 — Verified: `setExamAudienceSchema {audience: all_active|plans, planIds ≤ 50}`; `service.setExamAudience` → `{plans}`, `VALIDATION`/`planIds` for an empty or unknown plan list; publish check counts `exam_audience_plans`; `getExamForBuilder` returns `planIds`, `listExamsAdmin` returns `audience` + `planCodes`; `searchStudentsForAudience` and all `exam_assignees` reads removed; fixtures gained `makePlan` (inactive, so never public) and `planId`/`planIds` options. Integration (`content-exams.test.ts`): empty/unknown plans rejected, plans audience without plans blocks publish, two plans stored (dedupe), builder/list data, all_active clears, unknown exam → NOT_FOUND; `runtime-results.test.ts`: start → 404 outside the plan, 200 inside. Auth: `auth-matrix.test.ts` covers `setExamAudience` (UNAUTHENTICATED).
+- [x] **V2.26 Builder Audience tab**: "All active students" / "Students of these plans" (multi-select; inactive plans labelled); exams list shows audience chips.
+  Verify: E2E: a plan-A exam is visible to an A-student and a 404 for a B-student. Done: 2026-11-09 — Verified: Audience tab = radios "All active students" / "Students of these plans" + plan checkboxes (all plans, code shown, inactive ones badged), Save disabled with no plan; publish checklist gains "At least one plan is chosen"; exams list shows plan-code chips or "All active students". Student picker + label quick-add + their 3 i18n keys removed, 6 keys added. E2E `admin.spec.ts` (+1): tick a plan, saved rows/audience in DB, inactive badge, chip in the list. A-student vs B-student: see V2.27.
+- [x] **V2.27 Student side**: dashboard Next exam + Routine, `/exams`, lobby, start and results respect the audience (via `student_is_assigned`); update the access-mode/authorization specs (P4.14/P4.15) from "selected" to "plans".
+  Verify: E2E access matrix by plan. Done: 2026-11-09 — Verified: dashboard, `/exams`, lobby (all via `student_exam_cards`) and start (`start_attempt`) follow `student_is_assigned`; results are not audience-gated, so a renewal into another plan keeps past results. `exam-access.spec.ts` P4.14 "selected" case replaced: plan-A exam listed + Start for an A-student; hidden on `/exams`, lobby 404 and `POST /start` 404 for a B-student and a student without a plan. Integration (`runtime-results.test.ts`, +1): cards/lobby/dashboard per plan; after a plan switch the exam leaves the list but `listStudentResults`/`getAttemptResult` still return the attempt.
+- [x] **V2.28 Regression**: admin results, ranks, CSV and the Sheets mirror unchanged.
+  Verify: existing specs green. Done: 2026-11-09 — Verified: no changes to results, ranks, CSV or the Sheets mirror code; their existing integration tests (results gates, rank, CSV BOM, sheet handlers) and E2E specs (results-gates, admin results, leak test) pass in Gate E.
+- [x] **V2.29 Gate E** `pnpm run ci`.
+  Verify: CI output. Done: 2026-11-09 — Verified: `pnpm run ci` exit 0 — lint 0 errors (1 known TanStack warning), typecheck, vitest **271/271** (18 files; +1 audience test, −1 auth-matrix case for the removed `searchStudentsForAudience`), pgTAP **164/164** (10 files), i18n 962 keys, answer-leak, Playwright **139 passed** (exam route JS 166.5 KB < 180 KB), secrets.
 
 ### V2-F Public site, routine & enrollment flow (CR4, CR5, CR8, CR9)
 - [ ] **V2.30 Homepage**: remove the next-exam strip + routine section; hero label "Trial exam" (D8); plans section `id="pricing"` with scroll margin.
@@ -227,3 +227,6 @@ Production gets the whole history (0001–0019) at V2.38 on a reset, empty datab
 | 2026-11-09 | V2.18 | CSP `img-src`/`connect-src` add the `NEXT_PUBLIC_SUPABASE_URL` origin when it isn't `*.supabase.co` (was: `127.0.0.1:54321` in dev only). | Browser uploads and signed images need the local Storage origin under `next start` (E2E); production is unchanged (`*.supabase.co`). | TRD §10.9 |
 | 2026-11-09 | V2.20 | `upsertPlan` accepts a routine path only if the object exists in `plan-routines`; an edit without a new path keeps the current PDF (no way to remove it); a replaced PDF is deleted best-effort. | The browser uploads the file itself, so the server must not trust the path; D6 makes the PDF required for new plans, so removal isn't offered. | Schema §4 (path check) |
 | 2026-11-09 | V2.22 | `/routine` drops the public exam schedule now (not in V2.31); the cards there keep **Choose this plan**. | D4/AppFlow §4.2 define `/routine` as plan routines only, and §4.2 says each plan links to `/enroll?plan=` (AppFlow outranks UI §7.23's "without Choose this plan"). The homepage schedule and `getRoutine` stay until V2.30/V2.31. | — |
+| 2026-11-09 | V2.24 | `student_exam_cards` and `start_attempt` are not re-created in 0018. | They are PL/pgSQL and only call `student_is_assigned`, which 0018 rewrites; nothing in them depends on the dropped type or table. | — |
+| 2026-11-09 | V2.25 | `setExamAudience` rejects `plans` with no (existing) plan (`VALIDATION`, field `planIds`), in addition to the publish check. | Otherwise saving would silently hide a published exam from everyone. | — |
+| 2026-11-09 | V2.25 | Test plans (`makePlan`) are created inactive. | The audience rule ignores `is_active`; inactive plans never leak onto cached public pages or into the anon-plans pgTAP check. | — |

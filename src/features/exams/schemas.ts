@@ -30,8 +30,8 @@ export const examIdSchema = z.object({ id: uuidSchema });
 export const setExamQuestionsSchema = z.object({ id: uuidSchema, questionIds: z.array(uuidSchema).max(300) });
 export const setExamAudienceSchema = z.object({
   id: uuidSchema,
-  audience: z.enum(['all_active', 'selected']),
-  studentIds: z.array(uuidSchema).max(5000).default([]),
+  audience: z.enum(['all_active', 'plans']),
+  planIds: z.array(uuidSchema).max(50).default([]),
 });
 export const setFeaturedSchema = z.object({ id: uuidSchema.nullable() });
 export const examListSchema = z.object({

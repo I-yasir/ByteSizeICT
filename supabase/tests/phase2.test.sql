@@ -32,10 +32,11 @@ select results_eq($$select question_id::text, position from exam_questions
                   'order is preserved');
 select is((select question_count from exams where id = '00000000-0000-4000-8000-00000000e001'), 2, 'question_count updated');
 
-select is(set_exam_audience('00000000-0000-4000-8000-00000000e001', 'selected',
-            array['00000000-0000-4000-8000-0000000005a1', gen_random_uuid()]), 1, 'only existing students are assigned');
-select is(set_exam_audience('00000000-0000-4000-8000-00000000e001', 'all_active', null), 0, 'all_active clears assignees');
-select is((select count(*)::int from exam_assignees where exam_id = '00000000-0000-4000-8000-00000000e001'), 0, 'assignees removed');
+insert into plans (id, code, name_bn, name_en, duration_days, price_bdt) values ('00000000-0000-4000-8000-0000000000f2', 't-plan-p2', 'পি', 'P', 30, 100);
+select is(set_exam_audience('00000000-0000-4000-8000-00000000e001', 'plans',
+            array['00000000-0000-4000-8000-0000000000f2', gen_random_uuid()]), 1, 'only existing plans are stored');
+select is(set_exam_audience('00000000-0000-4000-8000-00000000e001', 'all_active', null), 0, 'all_active clears the plans');
+select is((select count(*)::int from exam_audience_plans where exam_id = '00000000-0000-4000-8000-00000000e001'), 0, 'audience plans removed');
 
 -- R1.1 (0014): difficulty, type, source, board year and tags are gone with their dependants.
 select hasnt_table('public', 'tags', 'tags table dropped');

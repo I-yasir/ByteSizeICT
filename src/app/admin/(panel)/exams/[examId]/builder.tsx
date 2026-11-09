@@ -4,7 +4,7 @@ import { closestCenter, DndContext, type DragEndEvent, KeyboardSensor, PointerSe
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { ArrowDown, ArrowUp, CircleCheck, CircleX, GripVertical, Plus, Search, Star, X } from 'lucide-react';
 import Link from 'next/link';
-import { useTranslations } from '@/lib/i18n/client';
+import { useLocale, useTranslations } from '@/lib/i18n/client';
 import { useEffect, useState } from 'react';
 import { useAction } from '@/components/admin/use-action';
 import { RichText } from '@/components/content/rich-text';
@@ -16,25 +16,26 @@ import { Input, Select } from '@/components/ui/field';
 import { archiveExam, publishExam, setExamAudience, setExamQuestions, setFeaturedExam, unpublishExam } from '@/features/exams/actions';
 import type { ExamPhase } from '@/features/exams/status';
 import { searchBank } from '@/features/questions/actions';
-import { searchStudentsForAudience } from '@/features/students/actions';
 import { cn } from '@/lib/utils';
 import { type ExamRow, ExamSettingsForm } from '../exam-settings-form';
 
 type Q = { id: string; stemHtml: string; status: string; chapterLabel: string };
-type Student = { id: string; mobile: string; email: string; admin_label: string | null };
+type Plan = { id: string; code: string; name_bn: string; name_en: string; is_active: boolean };
 type Chapter = { id: string; label: string };
 
 export type BuilderProps = {
-  exam: ExamRow & { status: 'draft' | 'published' | 'archived'; phase: ExamPhase; is_featured: boolean; audience: 'all_active' | 'selected' };
+  exam: ExamRow & { status: 'draft' | 'published' | 'archived'; phase: ExamPhase; is_featured: boolean; audience: 'all_active' | 'plans' };
   locked: boolean;
   attemptCount: number;
   /** computed on the server: the start time has already passed */
   startPassed: boolean;
   questions: Q[];
-  assignees: Student[];
+  /** Plans currently stored as the audience (audience = 'plans'). */
+  planIds: string[];
+  /** Every plan, inactive ones included (they may still have students). */
+  plans: Plan[];
   chapters: Chapter[];
   subjects: { id: string; name_en: string }[];
-  labels: string[];
 };
 
 /** Exam builder tabs: Settings · Questions · Audience · Publish (docs/02_AppFlow.md §6.8). */
@@ -177,75 +178,53 @@ function QuestionsTab({ exam, locked, questions: initial, chapters }: BuilderPro
   );
 }
 
-function AudienceTab({ exam, assignees, labels }: BuilderProps) {
+function AudienceTab({ exam, planIds, plans }: BuilderProps) {
   const t = useTranslations('admin.builder');
+  const locale = useLocale() as 'bn' | 'en';
   const { run, pending } = useAction();
   const [audience, setAudience] = useState(exam.audience);
-  const [chosen, setChosen] = useState<Student[]>(assignees);
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Student[]>([]);
-
-  async function find(input: { q?: string; label?: string }, addAll = false) {
-    const result = await searchStudentsForAudience(input);
-    if (!result.ok) return;
-    if (addAll) setChosen((list) => [...list, ...result.data.filter((s) => !list.some((x) => x.id === s.id))]);
-    else setResults(result.data);
-  }
+  const [chosen, setChosen] = useState<string[]>(planIds);
+  const toggle = (id: string, on: boolean) => setChosen((list) => (on ? [...list, id] : list.filter((x) => x !== id)));
 
   return (
     <Card className="flex max-w-app flex-col gap-4">
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 font-semibold text-fg">{t('audienceTitle')}</legend>
-        {(['all_active', 'selected'] as const).map((value) => (
+        {(['all_active', 'plans'] as const).map((value) => (
           <label key={value} className="flex min-h-11 items-center gap-2">
             <input type="radio" name="audience" className="size-5 accent-primary" checked={audience === value} onChange={() => setAudience(value)} />
             {t(`audience.${value}`)}
           </label>
         ))}
       </fieldset>
-      {audience === 'selected' ? (
-        <>
-          <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); void find({ q: query }); }}>
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('studentSearch')} aria-label={t('studentSearch')} />
-            <Button type="submit" variant="secondary">{t('search')}</Button>
-          </form>
-          {labels.length ? (
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="text-fg-muted">{t('addLabel')}</span>
-              {labels.map((label) => <Button key={label} size="sm" variant="ghost" onClick={() => void find({ label }, true)}>{label}</Button>)}
-            </div>
-          ) : null}
-          {results.length ? (
-            <ul className="flex flex-col gap-1">
-              {results.map((s) => (
-                <li key={s.id} className="flex items-center justify-between gap-2 rounded-md bg-surface-2 px-3 py-2 text-sm">
-                  <span><span className="font-num">{s.mobile}</span> · {s.email}</span>
-                  <Button size="sm" variant="secondary" disabled={chosen.some((c) => c.id === s.id)} onClick={() => setChosen((list) => [...list, s])}>{t('add')}</Button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          <div>
-            <p className="mb-2 text-sm font-semibold text-fg">{t('chosen', { n: chosen.length })}</p>
-            <ul className="flex flex-wrap gap-2">
-              {chosen.map((s) => (
-                <li key={s.id}>
-                  <Badge variant="primary" className="h-8 gap-1.5 pr-1 font-num text-sm">
-                    {s.mobile}
-                    <button type="button" aria-label={t('remove')} className="flex size-6 items-center justify-center rounded-sm hover:bg-primary/10" onClick={() => setChosen((list) => list.filter((x) => x.id !== s.id))}><X aria-hidden className="size-3.5" /></button>
-                  </Badge>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </>
+      {audience === 'plans' ? (
+        <fieldset className="flex flex-col gap-1 rounded-md border border-border p-3">
+          <legend className="px-1 text-sm font-semibold text-fg">{t('audiencePlans')}</legend>
+          {plans.length === 0 ? <p className="text-sm text-fg-muted">{t('noPlans')}</p> : null}
+          {plans.map((plan) => (
+            <label key={plan.id} className="flex min-h-11 items-center gap-2 text-sm">
+              <input type="checkbox" className="size-5 accent-primary" checked={chosen.includes(plan.id)} onChange={(e) => toggle(plan.id, e.target.checked)} />
+              <span className="text-fg">{locale === 'bn' ? plan.name_bn : plan.name_en}</span>
+              <span className="font-mono text-xs text-fg-muted">{plan.code}</span>
+              {!plan.is_active ? <Badge>{t('planInactive')}</Badge> : null}
+            </label>
+          ))}
+          <p className="mt-1 text-sm text-fg-muted">{t('audiencePlansHelp')}</p>
+        </fieldset>
       ) : null}
-      <Button className="self-start" loading={pending} onClick={() => run(() => setExamAudience({ id: exam.id, audience, studentIds: chosen.map((s) => s.id) }), { success: t('savedAudience') })}>{t('saveAudience')}</Button>
+      <Button
+        className="self-start"
+        loading={pending}
+        disabled={audience === 'plans' && chosen.length === 0}
+        onClick={() => run(() => setExamAudience({ id: exam.id, audience, planIds: audience === 'plans' ? chosen : [] }), { success: t('savedAudience') })}
+      >
+        {t('saveAudience')}
+      </Button>
     </Card>
   );
 }
 
-function PublishTab({ exam, questions, attemptCount, startPassed }: BuilderProps) {
+function PublishTab({ exam, questions, attemptCount, startPassed, planIds }: BuilderProps) {
   const t = useTranslations('admin.builder');
   const { run, pending } = useAction();
   const checks = [
@@ -254,6 +233,7 @@ function PublishTab({ exam, questions, attemptCount, startPassed }: BuilderProps
     { ok: questions.every((q) => q.status === 'active'), label: t('checks.active') },
     { ok: exam.is_sample || Boolean(exam.starts_at && exam.live_ends_at), label: t('checks.times') },
     { ok: exam.is_sample || exam.access_mode !== 'window' || Boolean(exam.late_until), label: t('checks.window') },
+    { ok: exam.is_sample || exam.audience !== 'plans' || planIds.length > 0, label: t('checks.audience') },
   ];
   const ready = checks.every((c) => c.ok);
   return (

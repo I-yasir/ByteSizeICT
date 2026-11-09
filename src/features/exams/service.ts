@@ -70,15 +70,12 @@ export async function setExamQuestions(id: string, questionIds: string[]): Promi
   return { count: unwrap(await supabaseAdmin.rpc('set_exam_questions', { p_exam_id: id, p_question_ids: questionIds })) };
 }
 
-export async function setExamAudience(
-  id: string,
-  audience: 'all_active' | 'selected',
-  studentIds: string[],
-): Promise<{ assigned: number }> {
-  const assigned = unwrap(
-    await supabaseAdmin.rpc('set_exam_audience', { p_exam_id: id, p_audience: audience, p_student_ids: studentIds }),
-  );
-  return { assigned };
+/** Audience = all active students, or the students of the chosen plans (CR1, D1). */
+export async function setExamAudience(id: string, audience: 'all_active' | 'plans', planIds: string[]): Promise<{ plans: number }> {
+  if (audience === 'plans' && planIds.length === 0) throw new ServiceError('VALIDATION', { field: 'planIds' });
+  const plans = unwrap(await supabaseAdmin.rpc('set_exam_audience', { p_exam_id: id, p_audience: audience, p_plan_ids: planIds }));
+  if (audience === 'plans' && plans === 0) throw new ServiceError('VALIDATION', { field: 'planIds' });
+  return { plans };
 }
 
 async function loadExam(id: string) {
@@ -100,8 +97,8 @@ export async function publishExam(adminId: string, id: string): Promise<{ id: st
 
   if (!exam.is_sample) {
     if (!exam.starts_at || !exam.live_ends_at) throw new ServiceError('EXAM_INVALID_TIMES', { field: 'startsAt' });
-    if (exam.audience === 'selected') {
-      const { count } = await supabaseAdmin.from('exam_assignees').select('student_id', { count: 'exact', head: true }).eq('exam_id', id);
+    if (exam.audience === 'plans') {
+      const { count } = await supabaseAdmin.from('exam_audience_plans').select('plan_id', { count: 'exact', head: true }).eq('exam_id', id);
       if (!count) throw new ServiceError('VALIDATION', { field: 'audience' });
     }
   }

@@ -41,6 +41,11 @@ export default async function ExamsAdminPage({ searchParams }: { searchParams: P
                   </span>
                   <span className="text-sm text-fg-muted">{exam.starts_at ? formatDate(exam.starts_at, locale, 'dateTime') : '—'}</span>
                 </span>
+                {exam.is_sample ? null : exam.audience === 'plans' ? (
+                  exam.planCodes.map((code) => <Badge key={code} variant="info" className="font-mono">{code}</Badge>)
+                ) : (
+                  <Badge variant="neutral">{tb('audience.all_active')}</Badge>
+                )}
                 <Badge variant={PHASE_BADGE[exam.phase]}>{tb(`phase.${exam.phase}`)}</Badge>
                 <span className="font-num text-sm text-fg-muted">{t('counts', { q: formatNumber(exam.question_count, locale), a: formatNumber(exam.attempts, locale) })}</span>
               </Link>

@@ -12,6 +12,7 @@ const created = {
   chapters: [] as string[],
   questions: [] as string[],
   exams: [] as string[],
+  plans: [] as string[],
   admissionsByMobile: [] as string[],
 };
 
@@ -37,6 +38,7 @@ export async function makeStudent(
     pinHash?: string;
     mustChangePin?: boolean;
     startsInFuture?: boolean;
+    planId?: string;
   } = {},
 ) {
   const mobile = options.mobile ?? randomMobile();
@@ -52,6 +54,7 @@ export async function makeStudent(
         status: options.status ?? 'active',
         access_starts_at: new Date(options.startsInFuture ? now + 2 * DAY : now - 30 * DAY).toISOString(),
         access_expires_at: new Date(options.expired ? now - DAY : now + 30 * DAY).toISOString(),
+        plan_id: options.planId ?? null,
       })
       .select('id, mobile, email, status, must_change_pin, access_starts_at, access_expires_at, plan_id, credentials_status')
       .single(),
@@ -59,6 +62,17 @@ export async function makeStudent(
   created.students.push(student.id);
   created.admissionsByMobile.push(mobile);
   return student;
+}
+
+/** A plan for exam-audience tests (R1.1). Inactive, so it never shows on public pages; the audience
+ * rule only looks at the student's plan_id. */
+export async function makePlan(): Promise<{ id: string; code: string }> {
+  const code = `p-${Date.now().toString(36)}-${randomInt(1e6).toString(36)}`;
+  const plan = must(
+    await testDb.from('plans').insert({ code, name_bn: `প্ল্যান ${code}`, name_en: `Plan ${code}`, duration_days: 30, price_bdt: 100, sort_order: 900, is_active: false }).select('id, code').single(),
+  );
+  created.plans.push(plan.id);
+  return plan;
 }
 
 export function studentContext(student: Awaited<ReturnType<typeof makeStudent>>): StudentContext {
@@ -121,7 +135,9 @@ export async function makeExam(input: {
   shuffleQuestions?: boolean;
   shuffleOptions?: boolean;
   marksPerQuestion?: number;
-  audience?: 'all_active' | 'selected';
+  audience?: 'all_active' | 'plans';
+  /** With audience = 'plans': the targeted plans. */
+  planIds?: string[];
 }) {
   const now = Date.now();
   const exam = must(
@@ -158,6 +174,9 @@ export async function makeExam(input: {
         .select('exam_id'),
     );
   }
+  if (input.planIds?.length) {
+    must(await testDb.from('exam_audience_plans').insert(input.planIds.map((plan_id) => ({ exam_id: exam.id, plan_id }))).select('exam_id'));
+  }
   return exam.id;
 }
 
@@ -188,6 +207,10 @@ export async function cleanup(): Promise<void> {
   if (created.students.length) {
     await testDb.from('admissions').delete().in('student_id', created.students);
     await testDb.from('students').delete().in('id', created.students);
+  }
+  if (created.plans.length) {
+    await testDb.from('admissions').update({ plan_id: null }).in('plan_id', created.plans);
+    await testDb.from('plans').delete().in('id', created.plans);
   }
   if (created.admins.length) {
     await testDb.from('question_import_batches').delete().in('admin_id', created.admins);

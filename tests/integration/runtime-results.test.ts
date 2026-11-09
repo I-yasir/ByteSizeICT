@@ -26,6 +26,7 @@ import { testDb } from '../helpers/db';
 import {
   cleanup,
   makeAdmin,
+  makePlan,
   makeExam,
   makeQuestionBank,
   makeStudent,
@@ -261,13 +262,12 @@ describe('exam runtime routes (P2.16–P2.21)', () => {
     });
     expect((await start(scheduled)).json.error?.code).toBe('EXAM_NOT_STARTED');
 
-    const selected = await makeExam({ questionIds: [q1] });
-    await testDb.rpc('set_exam_audience', {
-      p_exam_id: selected,
-      p_audience: 'selected',
-      p_student_ids: [],
-    });
-    expect((await start(selected)).status).toBe(404);
+    // R1.1: audience by plan — outside the plan (or without one) the exam does not exist for the student.
+    const plan = await makePlan();
+    const forPlan = await makeExam({ questionIds: [q1], audience: 'plans', planIds: [plan.id] });
+    expect((await start(forPlan)).status).toBe(404);
+    authState.student = studentContext(await makeStudent({ planId: plan.id }));
+    expect((await start(forPlan)).status).toBe(200);
   });
 
   it('shuffled options: paper display order follows option_order; scoring uses canonical keys', async () => {
@@ -314,6 +314,40 @@ describe('answer-key leak (TRD §10.2)', () => {
 });
 
 describe('cards, lobby, results gates (P2.17, P2.22)', () => {
+  it('audience by plan (R1.1 V2.27): cards, lobby and dashboard follow the plan; past results survive a plan switch', async () => {
+    const q = bank.questions[0]?.id as string;
+    const [planA, planB] = [await makePlan(), await makePlan()];
+    const examId = await makeExam({ questionIds: [q], audience: 'plans', planIds: [planA.id] });
+    const a = await makeStudent({ planId: planA.id });
+    const b = await makeStudent({ planId: planB.id });
+    const none = await makeStudent();
+    const visible = async (studentId: string) => (await getStudentExamCards(studentId)).some((c) => c.examId === examId);
+    expect(await visible(a.id)).toBe(true);
+    expect(await visible(b.id)).toBe(false);
+    expect(await visible(none.id)).toBe(false);
+    expect(await getExamLobby(examId, a.id)).not.toBeNull();
+    expect(await getExamLobby(examId, b.id)).toBeNull();
+    // Dashboard: an exam starting in a minute is the student's first "upcoming" card.
+    const soon = await makeExam({
+      questionIds: [q], audience: 'plans', planIds: [planA.id],
+      startsAt: new Date(Date.now() + MIN), liveEndsAt: new Date(Date.now() + 30 * MIN),
+    });
+    const dashboard = async (student: Awaited<ReturnType<typeof makeStudent>>) => {
+      const dash = await getStudentDashboard(student);
+      return [dash.primary, ...dash.upcoming].some((c) => c?.examId === soon);
+    };
+    expect(await dashboard(a)).toBe(true);
+    expect(await dashboard(b)).toBe(false);
+
+    const { data: attemptId } = await testDb.rpc('start_attempt', { p_exam_id: examId, p_student_id: a.id });
+    await testDb.rpc('submit_attempt', { p_attempt_id: attemptId as string, p_student_id: a.id, p_changes: [], p_auto: false });
+    // Renewal into another plan: the exam leaves the student's list, the result stays reachable.
+    await testDb.from('students').update({ plan_id: planB.id }).eq('id', a.id);
+    expect(await visible(a.id)).toBe(false);
+    expect((await listStudentResults(a.id)).items.map((r) => r.attemptId)).toContain(attemptId);
+    expect(await getAttemptResult(attemptId as string, { id: a.id, accessState: 'active' })).not.toBeNull();
+  });
+
   it('cards cover live / upcoming / missed / missed_available / completed / locked', async () => {
     const q = bank.questions[0]?.id as string;
     const now = Date.now();

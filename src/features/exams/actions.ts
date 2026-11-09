@@ -30,7 +30,7 @@ export const setExamQuestions = adminAction('exams.questions', setExamQuestionsS
   refresh(await service.setExamQuestions(input.id, input.questionIds)),
 );
 export const setExamAudience = adminAction('exams.audience', setExamAudienceSchema, async (input) =>
-  refresh(await service.setExamAudience(input.id, input.audience, input.studentIds)),
+  refresh(await service.setExamAudience(input.id, input.audience, input.planIds)),
 );
 export const publishExam = adminAction('exams.publish', examIdSchema, async (input, { admin }) =>
   refresh(await service.publishExam(admin.id, input.id)),

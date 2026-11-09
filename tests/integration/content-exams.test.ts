@@ -14,7 +14,7 @@ import { getQuestionForEdit, searchQuestions } from '@/features/questions/querie
 import * as taxonomyActions from '@/features/taxonomy/actions';
 import { getTaxonomy } from '@/features/taxonomy/queries';
 import { testDb } from '../helpers/db';
-import { cleanup, makeAdmin, makeExam, makeQuestionBank, makeStudent, trackExam, trackQuestion } from '../helpers/fixtures';
+import { cleanup, makeAdmin, makeExam, makePlan, makeQuestionBank, makeStudent, trackExam, trackQuestion } from '../helpers/fixtures';
 import { authState } from '../helpers/mocks';
 import { buildWorkbook, makePng, questionRow, toArrayBuffer } from '../helpers/xlsx';
 
@@ -487,14 +487,30 @@ describe('exam builder (P2.15)', () => {
     ok(await examActions.archiveExam({ id: closed }));
   });
 
-  it('selected audience requires assignees before publish', async () => {
+  it('audience by plan (R1.1 V2.25): needs at least one existing plan; publish checks it; builder and list show it', async () => {
     const created = ok(await examActions.createExam(settings()));
     trackExam(created.id);
     ok(await examActions.setExamQuestions({ id: created.id, questionIds: [bank.questions[1]?.id as string] }));
-    ok(await examActions.setExamAudience({ id: created.id, audience: 'selected', studentIds: [] }));
+    expect(await examActions.setExamAudience({ id: created.id, audience: 'plans', planIds: [] })).toMatchObject({
+      ok: false, error: { code: 'VALIDATION', field: 'planIds' },
+    });
+    expect(await examActions.setExamAudience({ id: created.id, audience: 'plans', planIds: [crypto.randomUUID()] })).toMatchObject({
+      ok: false, error: { code: 'VALIDATION', field: 'planIds' },
+    });
+    // A plans audience without plans (only reachable through the DB) blocks publishing.
+    await testDb.from('exams').update({ audience: 'plans' }).eq('id', created.id);
     expect(await examActions.publishExam({ id: created.id })).toMatchObject({ ok: false, error: { code: 'VALIDATION', field: 'audience' } });
-    const student = await makeStudent();
-    expect(ok(await examActions.setExamAudience({ id: created.id, audience: 'selected', studentIds: [student.id] }))).toEqual({ assigned: 1 });
+
+    const [planA, planB] = [await makePlan(), await makePlan()];
+    expect(ok(await examActions.setExamAudience({ id: created.id, audience: 'plans', planIds: [planA.id, planB.id, planA.id] }))).toEqual({ plans: 2 });
     ok(await examActions.publishExam({ id: created.id }));
+    expect((await getExamForBuilder(created.id))?.planIds.sort()).toEqual([planA.id, planB.id].sort());
+    const listed = (await listExamsAdmin()).find((e) => e.id === created.id);
+    expect(listed).toMatchObject({ audience: 'plans' });
+    expect(listed?.planCodes.sort()).toEqual([planA.code, planB.code].sort());
+
+    expect(ok(await examActions.setExamAudience({ id: created.id, audience: 'all_active', planIds: [planA.id] }))).toEqual({ plans: 0 });
+    expect((await getExamForBuilder(created.id))?.planIds).toEqual([]);
+    expect(await examActions.setExamAudience({ id: crypto.randomUUID(), audience: 'all_active' })).toMatchObject({ ok: false, error: { code: 'NOT_FOUND' } });
   });
 });

@@ -1020,8 +1020,6 @@
       "bank": "Question bank",
       "chapter": "Chapter",
       "allChapters": "All chapters",
-      "search": "Search",
-      "add": "Add",
       "added": "Added",
       "noResults": "Nothing found.",
       "selectedTitle": "{n} selected · {marks} marks",
@@ -1032,15 +1030,11 @@
       "drag": "Drag to reorder",
       "moveUp": "Move up",
       "moveDown": "Move down",
-      "remove": "Remove",
       "audienceTitle": "Who takes this exam",
       "audience": {
         "all_active": "All active students",
-        "selected": "Selected students"
+        "plans": "Students of these plans"
       },
-      "studentSearch": "Mobile or email",
-      "addLabel": "Add everyone with label:",
-      "chosen": "{n} chosen",
       "saveAudience": "Save",
       "savedAudience": "Audience saved",
       "status": {
@@ -1062,7 +1056,8 @@
         "questions": "At least one question",
         "active": "All questions are active",
         "times": "Start and end times are set",
-        "window": "Late window is set"
+        "window": "Late window is set",
+        "audience": "At least one plan is chosen"
       },
       "liveNowWarning": "The start time has passed — publishing makes the exam live immediately.",
       "preview": "Preview as student",
@@ -1075,7 +1070,14 @@
       "feature": "Feature on homepage",
       "unfeature": "Remove from homepage",
       "featuredSaved": "Homepage updated",
-      "results": "View results"
+      "results": "View results",
+      "audiencePlans": "Plans",
+      "audiencePlansHelp": "Students whose current plan is ticked see this exam. Students without a plan see only exams for all active students.",
+      "planInactive": "inactive",
+      "noPlans": "No plans yet. Create one in Settings → Plans.",
+      "search": "Search",
+      "add": "Add",
+      "remove": "Remove"
     },
     "examResults": {
       "title": "Exam results",

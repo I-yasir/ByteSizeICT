@@ -11,15 +11,16 @@ export async function listExamsAdmin(filter: { phase?: ExamPhase | 'all' } = {})
   const rows = unwrap(
     await supabaseAdmin
       .from('exams')
-      .select('id, title, status, is_sample, is_featured, access_mode, starts_at, live_ends_at, late_until, question_count, exam_attempts(count)')
+      .select('id, title, status, is_sample, is_featured, access_mode, audience, starts_at, live_ends_at, late_until, question_count, exam_attempts(count), exam_audience_plans(plan:plans(code))')
       .order('starts_at', { ascending: false, nullsFirst: true })
       .limit(500),
   );
   return rows
-    .map(({ exam_attempts, ...exam }) => ({
+    .map(({ exam_attempts, exam_audience_plans, ...exam }) => ({
       ...exam,
       phase: computeExamPhase(exam),
       attempts: exam_attempts[0]?.count ?? 0,
+      planCodes: exam_audience_plans.flatMap((row) => (row.plan ? [row.plan.code] : [])),
     }))
     .filter((exam) => phase === 'all' || exam.phase === phase);
 }
@@ -27,14 +28,14 @@ export async function listExamsAdmin(filter: { phase?: ExamPhase | 'all' } = {})
 export async function getExamForBuilder(id: string) {
   const exam = unwrapMaybe(await supabaseAdmin.from('exams').select('*').eq('id', id).maybeSingle());
   if (!exam) return null;
-  const [questions, assignees, attempts] = await Promise.all([
+  const [questions, audiencePlans, attempts] = await Promise.all([
     supabaseAdmin
       .from('exam_questions')
       .select('position, question:questions(id, stem, status, chapter:chapters(number, name_en))')
       .eq('exam_id', id)
       .order('position')
       .then(unwrap),
-    supabaseAdmin.from('exam_assignees').select('student:students(id, mobile, email, admin_label)').eq('exam_id', id).then(unwrap),
+    supabaseAdmin.from('exam_audience_plans').select('plan_id').eq('exam_id', id).then(unwrap),
     supabaseAdmin.from('exam_attempts').select('id', { count: 'exact', head: true }).eq('exam_id', id),
   ]);
   return {
@@ -44,7 +45,7 @@ export async function getExamForBuilder(id: string) {
     questions: questions.flatMap((row) =>
       row.question ? [{ ...row.question, position: row.position, stemHtml: renderRichText(row.question.stem) }] : [],
     ),
-    assignees: assignees.flatMap((row) => (row.student ? [row.student] : [])),
+    planIds: audiencePlans.map((row) => row.plan_id),
   };
 }
 

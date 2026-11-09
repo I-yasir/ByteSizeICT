@@ -312,36 +312,6 @@ export type Database = {
           },
         ]
       }
-      exam_assignees: {
-        Row: {
-          exam_id: string
-          student_id: string
-        }
-        Insert: {
-          exam_id: string
-          student_id: string
-        }
-        Update: {
-          exam_id?: string
-          student_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "exam_assignees_exam_id_fkey"
-            columns: ["exam_id"]
-            isOneToOne: false
-            referencedRelation: "exams"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "exam_assignees_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       exam_attempts: {
         Row: {
           correct_count: number | null
@@ -416,6 +386,36 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exam_audience_plans: {
+        Row: {
+          exam_id: string
+          plan_id: string
+        }
+        Insert: {
+          exam_id: string
+          plan_id: string
+        }
+        Update: {
+          exam_id?: string
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_audience_plans_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_audience_plans_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
             referencedColumns: ["id"]
           },
         ]
@@ -1359,7 +1359,7 @@ export type Database = {
         Args: {
           p_audience: Database["public"]["Enums"]["exam_audience"]
           p_exam_id: string
-          p_student_ids: string[]
+          p_plan_ids: string[]
         }
         Returns: number
       }
@@ -1443,7 +1443,7 @@ export type Database = {
       attempt_status: "in_progress" | "submitted" | "auto_submitted"
       content_status: "draft" | "active" | "archived"
       credentials_status: "pending" | "sent" | "failed"
-      exam_audience: "all_active" | "selected"
+      exam_audience: "all_active" | "plans"
       exam_status: "draft" | "published" | "archived"
       option_key: "A" | "B" | "C" | "D"
       outbox_kind:
@@ -1591,7 +1591,7 @@ export const Constants = {
       attempt_status: ["in_progress", "submitted", "auto_submitted"],
       content_status: ["draft", "active", "archived"],
       credentials_status: ["pending", "sent", "failed"],
-      exam_audience: ["all_active", "selected"],
+      exam_audience: ["all_active", "plans"],
       exam_status: ["draft", "published", "archived"],
       option_key: ["A", "B", "C", "D"],
       outbox_kind: [

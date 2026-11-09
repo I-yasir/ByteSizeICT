@@ -1,8 +1,9 @@
 import type { Page } from '@playwright/test';
 import { testDb } from '../helpers/db';
-import { makeExam, makeQuestionBank, trackMobile } from '../helpers/fixtures';
+import { makeExam, makePlan, makeQuestionBank, trackMobile } from '../helpers/fixtures';
 import {
   attemptRow,
+  BASE_URL,
   card,
   createStudent,
   expect,
@@ -341,13 +342,37 @@ test.describe('P4.14 access modes', () => {
     expect(Date.parse(row.deadline_at) - Date.now()).toBeGreaterThan(19 * MIN);
   });
 
-  test('selected audience: an unassigned student gets a 404', async ({ page, context }) => {
-    const student = await createStudent();
-    await loginStudent(context, student.id);
-    const examId = await makeExam({ questionIds: await bankIds(), audience: 'selected' });
-    // The (student) group streams (loading.tsx), so notFound() renders the 404 UI with status 200.
-    await page.goto(`/exams/${examId}`);
-    await expect(page.getByRole('heading', { name: msg('notFound.title') })).toBeVisible();
-    await expect(page.getByRole('button', { name: msg('lobby.start') })).toHaveCount(0);
+  test('plans audience: a plan-A exam is open to an A-student and a 404 for B or no-plan students', async ({ browser }) => {
+    const [planA, planB] = [await makePlan(), await makePlan()];
+    const examId = await makeExam({ questionIds: await bankIds(), audience: 'plans', planIds: [planA.id] });
+    const title = (await testDb.from('exams').select('title').eq('id', examId).single()).data?.title ?? '';
+
+    const asStudent = async (planId?: string) => {
+      const context = await browser.newContext();
+      const student = await createStudent(planId ? { planId } : {});
+      await loginStudent(context, student.id);
+      return { context, page: await context.newPage() };
+    };
+
+    const a = await asStudent(planA.id);
+    await a.page.goto('/exams');
+    await expect(a.page.getByText(title)).toBeVisible();
+    await a.page.goto(`/exams/${examId}`);
+    await expect(a.page.getByRole('button', { name: msg('lobby.start') })).toBeVisible();
+    await a.context.close();
+
+    for (const planId of [planB.id, undefined]) {
+      const other = await asStudent(planId);
+      await other.page.goto('/exams');
+      await expect(other.page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expect(other.page.getByText(title)).toHaveCount(0);
+      // The (student) group streams (loading.tsx), so notFound() renders the 404 UI with status 200.
+      await other.page.goto(`/exams/${examId}`);
+      await expect(other.page.getByRole('heading', { name: msg('notFound.title') })).toBeVisible();
+      await expect(other.page.getByRole('button', { name: msg('lobby.start') })).toHaveCount(0);
+      const started = await other.context.request.post(`/api/exams/${examId}/start`, { headers: { origin: BASE_URL } });
+      expect(started.status()).toBe(404);
+      await other.context.close();
+    }
   });
 });

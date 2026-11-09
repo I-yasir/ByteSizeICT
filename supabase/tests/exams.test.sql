@@ -9,6 +9,8 @@ insert into chapters (id, subject_id, number, name_bn, name_en)
 values ('00000000-0000-4000-8000-0000000000c1', '00000000-0000-4000-8000-0000000000a1', 1, 'অধ্যায় ১', 'Chapter 1');
 insert into questions (id, chapter_id, stem, option_a, option_b, option_c, option_d, correct_option, status) values
   ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000c1', 'Q1', 'a', 'b', 'c', 'd', 'A', 'active');
+insert into plans (id, code, name_bn, name_en, duration_days, price_bdt) values
+  ('00000000-0000-4000-8000-0000000000f1', 't-plan-a', 'এ', 'A', 30, 100);
 insert into students (id, mobile, email, pin_hash, access_starts_at, access_expires_at) values
   ('00000000-0000-4000-8000-0000000005a1', '01990000001', 'a@t.test', 'x', now() - interval '1 day', now() + interval '30 days'),
   ('00000000-0000-4000-8000-0000000005a2', '01990000002', 'b@t.test', 'x', now() - interval '60 days', now() - interval '1 day');
@@ -20,8 +22,9 @@ insert into exams (id, title, status, access_mode, starts_at, live_ends_at, late
   ('00000000-0000-4000-8000-00000000e004', 'Closed',   'published', 'fixed',  now() - interval '2 hours', now() - interval '1 hour',  null),
   ('00000000-0000-4000-8000-00000000e005', 'Always',   'published', 'always', now() - interval '2 hours', now() - interval '1 hour',  null),
   ('00000000-0000-4000-8000-00000000e006', 'Draft',    'draft',     'fixed',  null, null, null),
-  ('00000000-0000-4000-8000-00000000e007', 'Selected', 'published', 'fixed',  now() - interval '1 hour',  now() + interval '1 hour',  null);
-update exams set audience = 'selected' where id = '00000000-0000-4000-8000-00000000e007';
+  ('00000000-0000-4000-8000-00000000e007', 'Plans',    'published', 'fixed',  now() - interval '1 hour',  now() + interval '1 hour',  null);
+update exams set audience = 'plans' where id = '00000000-0000-4000-8000-00000000e007';
+insert into exam_audience_plans values ('00000000-0000-4000-8000-00000000e007', '00000000-0000-4000-8000-0000000000f1');
 insert into exam_questions (exam_id, question_id, position)
 select id, '00000000-0000-4000-8000-000000000001', 1 from exams
  where status = 'published' and id::text like '00000000-0000-4000-8000-00000000e00%';
@@ -29,7 +32,7 @@ select id, '00000000-0000-4000-8000-000000000001', 1 from exams
 select results_eq(
   $$select title, exam_phase(e) from exams e where id::text like '00000000-0000-4000-8000-00000000e00%' order by title$$,
   $$values ('Always', 'late_window'), ('Closed', 'closed'), ('Draft', 'draft'), ('Live', 'live'),
-           ('Selected', 'live'), ('Upcoming', 'scheduled'), ('Window', 'late_window')$$,
+           ('Plans', 'live'), ('Upcoming', 'scheduled'), ('Window', 'late_window')$$,
   'exam_phase covers every branch');
 
 select is(exam_phase(e, now() + interval '2 days'), 'closed', 'window exam closes after late_until')
@@ -54,9 +57,9 @@ select results_eq(
      where exam_id::text like '00000000-0000-4000-8000-00000000e00%'$$,
   $$values ('locked')$$, 'expired student sees every card as locked');
 
-insert into exam_assignees values ('00000000-0000-4000-8000-00000000e007', '00000000-0000-4000-8000-0000000005a1');
+update students set plan_id = '00000000-0000-4000-8000-0000000000f1' where id = '00000000-0000-4000-8000-0000000005a1';
 select is((select card_status from student_exam_cards('00000000-0000-4000-8000-0000000005a1') where exam_id = '00000000-0000-4000-8000-00000000e007'),
-          'live', 'assigned student sees the selected-audience exam');
+          'live', 'a student of the targeted plan sees the plans-audience exam');
 select throws_ok($$select start_attempt('00000000-0000-4000-8000-00000000e007', '00000000-0000-4000-8000-0000000005a2')$$,
                  'P0001', 'ACCESS_INACTIVE', 'inactive check precedes availability');
 
