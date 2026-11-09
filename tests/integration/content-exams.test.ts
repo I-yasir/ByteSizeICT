@@ -456,7 +456,7 @@ describe('exam builder (P2.15)', () => {
     });
   });
 
-  it('locks after attempts: settings, unpublish; featured is unique; archive only when closed', async () => {
+  it('locks after attempts: settings, unpublish; archive only when closed; no homepage feature (R1.1 D5)', async () => {
     const examId = await makeExam({ questionIds: [bank.questions[3]?.id as string] });
     const student = await makeStudent();
     await testDb.rpc('start_attempt', { p_exam_id: examId, p_student_id: student.id });
@@ -471,12 +471,8 @@ describe('exam builder (P2.15)', () => {
     ).toMatchObject({ ok: false, error: { code: 'EXAM_LOCKED' } });
     expect(await examActions.unpublishExam({ id: examId })).toMatchObject({ ok: false, error: { code: 'EXAM_LOCKED' } });
 
-    ok(await examActions.setFeaturedExam({ id: examId }));
-    const other = await makeExam({ questionIds: [bank.questions[2]?.id as string] });
-    ok(await examActions.setFeaturedExam({ id: other }));
-    const { data: featured } = await testDb.from('exams').select('id').eq('is_featured', true);
-    expect(featured?.map((e) => e.id)).toEqual([other]);
-    ok(await examActions.setFeaturedExam({ id: null }));
+    expect(examActions).not.toHaveProperty('setFeaturedExam');
+    expect(current?.exam).not.toHaveProperty('is_featured');
 
     expect(await examActions.archiveExam({ id: examId })).toMatchObject({ ok: false, error: { code: 'VALIDATION' } });
     const closed = await makeExam({

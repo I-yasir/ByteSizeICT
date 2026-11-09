@@ -13,6 +13,7 @@ export async function PublicFooter({ brandName, contact }: { brandName: string; 
           <p className="mt-2 text-sm text-fg-muted">{t('footer.tagline')}</p>
         </div>
         <nav aria-label={t('footer.links')} className="flex flex-col gap-1 text-sm">
+          <Link className="min-h-11 content-center text-fg-muted hover:text-fg" href="/#pricing">{t('nav.enroll')}</Link>
           <Link className="min-h-11 content-center text-fg-muted hover:text-fg" href="/routine">{t('nav.routine')}</Link>
           <Link className="min-h-11 content-center text-fg-muted hover:text-fg" href="/faq">{t('nav.faq')}</Link>
           <Link className="min-h-11 content-center text-fg-muted hover:text-fg" href="/privacy">{t('footer.privacy')}</Link>

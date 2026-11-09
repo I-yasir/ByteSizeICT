@@ -60,7 +60,7 @@ export function SampleResultView() {
       <div className="fixed inset-x-0 bottom-0 z-sticky border-t border-border bg-surface px-4 pt-2 pb-safe shadow-md">
         <div className="mx-auto max-w-exam pb-2">
           <Button asChild size="lg" fullWidth>
-            <Link href="/enroll" onClick={() => track('sample_enroll_click')}>{ts('enroll')}</Link>
+            <Link href="/#pricing" onClick={() => track('sample_enroll_click')}>{ts('enroll')}</Link>
           </Button>
         </div>
       </div>

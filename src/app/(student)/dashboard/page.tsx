@@ -76,7 +76,12 @@ export default async function DashboardPage() {
       </section>
 
       <section aria-labelledby="upcoming">
-        <h2 id="upcoming" className="mb-3 text-lg font-semibold text-fg">{t('upcoming')}</h2>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 id="upcoming" className="text-lg font-semibold text-fg">{t('upcoming')}</h2>
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/routine">{t('fullRoutine')}</Link>
+          </Button>
+        </div>
         {data.upcoming.length ? (
           <ul className="flex flex-col gap-2">
             {data.upcoming.map((card) => (

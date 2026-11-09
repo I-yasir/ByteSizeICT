@@ -11,7 +11,7 @@ export async function listExamsAdmin(filter: { phase?: ExamPhase | 'all' } = {})
   const rows = unwrap(
     await supabaseAdmin
       .from('exams')
-      .select('id, title, status, is_sample, is_featured, access_mode, audience, starts_at, live_ends_at, late_until, question_count, exam_attempts(count), exam_audience_plans(plan:plans(code))')
+      .select('id, title, status, is_sample, access_mode, audience, starts_at, live_ends_at, late_until, question_count, exam_attempts(count), exam_audience_plans(plan:plans(code))')
       .order('starts_at', { ascending: false, nullsFirst: true })
       .limit(500),
   );

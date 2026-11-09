@@ -9,10 +9,10 @@ import { formatDate, formatNumber, formatTaka } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
- * Plan card (docs/03_UI_Spec.md §7.23): homepage pricing and /routine. Every "Choose this plan" is
+ * Plan card (docs/03_UI_Spec.md §7.23): homepage pricing, /routine and (without Choose) the /enroll summary. Every "Choose this plan" is
  * `primary` (CR7, the documented exception to one primary per region); "View routine" sits above it.
  */
-export async function PlanCard({ plan, routineFallback = false }: { plan: PublicPlan; routineFallback?: boolean }) {
+export async function PlanCard({ plan, routineFallback = false, showChoose = true }: { plan: PublicPlan; routineFallback?: boolean; showChoose?: boolean }) {
   const t = await getTranslations('home.pricing');
   const locale = (await getLocale()) as 'bn' | 'en';
   const name = locale === 'bn' ? plan.nameBn : plan.nameEn;
@@ -62,12 +62,14 @@ export async function PlanCard({ plan, routineFallback = false }: { plan: Public
         ) : routineFallback ? (
           <p className="flex min-h-11 items-center justify-center rounded-md bg-surface-2 text-sm text-fg-muted">{t('routineSoon')}</p>
         ) : null}
-        <Button asChild fullWidth>
-          <Link href={`/enroll?plan=${encodeURIComponent(plan.code)}`}>
-            {t('choose')}
-            <span className="sr-only"> — {name}</span>
-          </Link>
-        </Button>
+        {showChoose ? (
+          <Button asChild fullWidth>
+            <Link href={`/enroll?plan=${encodeURIComponent(plan.code)}`}>
+              {t('choose')}
+              <span className="sr-only"> — {name}</span>
+            </Link>
+          </Button>
+        ) : null}
       </div>
     </Card>
   );

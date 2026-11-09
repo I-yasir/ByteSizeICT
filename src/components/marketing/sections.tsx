@@ -1,12 +1,13 @@
-import { BookOpen, CalendarCheck, CreditCard, Lightbulb, Mail, PlayCircle, Quote, RotateCcw, Trophy, Zap } from 'lucide-react';
+import { BookOpen, CalendarCheck, CreditCard, Lightbulb, Mail, MessageCircle, PlayCircle, Quote, RotateCcw, Trophy, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Accordion, AccordionItem } from '@/components/ui/controls';
-import { SectionHeading } from '@/components/ui/misc';
+import { EmptyState, SectionHeading } from '@/components/ui/misc';
 import type { PublicPlan } from '@/features/public/queries';
 import { PlanCard } from './plan-card';
+import { ScrollToHash } from './scroll-to-hash';
 import type { SettingValue } from '@/features/settings/schemas';
 import { cn } from '@/lib/utils';
 
@@ -128,21 +129,36 @@ export async function HowItWorks() {
   );
 }
 
-export async function Pricing({ plans }: { plans: PublicPlan[] }) {
-  if (plans.length === 0) return null;
+/** Plans & Pricing (`id="pricing"`): every "Enroll Now" scrolls here (CR8), so it renders even without plans. */
+export async function Pricing({ plans, whatsapp }: { plans: PublicPlan[]; whatsapp: string | null }) {
   const t = await getTranslations('home.pricing');
   return (
-    <Section id="pricing">
+    <Section id="pricing" className="scroll-mt-15">
+      <ScrollToHash id="pricing" />
       <div id="pricing-title">
         <SectionHeading title={t('title')} subtitle={t('subtitle')} />
       </div>
-      <ul className="grid gap-4 md:grid-cols-3">
-        {plans.map((plan) => (
-          <li key={plan.id}>
-            <PlanCard plan={plan} />
-          </li>
-        ))}
-      </ul>
+      {plans.length > 0 ? (
+        <ul className="grid gap-4 md:grid-cols-3">
+          {plans.map((plan) => (
+            <li key={plan.id}>
+              <PlanCard plan={plan} />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <EmptyState
+          icon={<CreditCard />}
+          title={t('empty')}
+          action={
+            whatsapp ? (
+              <Button asChild variant="secondary" leadingIcon={<MessageCircle aria-hidden className="size-4" />}>
+                <a href={whatsapp} target="_blank" rel="noopener noreferrer">WhatsApp</a>
+              </Button>
+            ) : null
+          }
+        />
+      )}
     </Section>
   );
 }

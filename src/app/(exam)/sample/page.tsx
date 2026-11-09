@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/misc';
 import { getSamplePaper } from '@/features/sample/service';
 
-/** /sample — free sample exam, no login (PRD V-05, docs/02_AppFlow.md §4.5). */
+/** /sample — the trial (sample) exam, no login (PRD V-05, docs/02_AppFlow.md §4.5). */
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations('sample'))('title') };
 }
@@ -22,7 +22,7 @@ export default async function SamplePage() {
           title={t('unavailable')}
           action={
             <Button asChild>
-              <Link href="/enroll">{t('enroll')}</Link>
+              <Link href="/#pricing">{t('enroll')}</Link>
             </Button>
           }
         />

@@ -1,7 +1,7 @@
 import { randomInt } from 'node:crypto';
 import type { Page } from '@playwright/test';
 import { randomMobile, testDb } from '../helpers/db';
-import { trackMobile, trackStudent } from '../helpers/fixtures';
+import { makePlan, trackMobile, trackStudent } from '../helpers/fixtures';
 import { BASE_URL, createStudent, expect, loginAdmin, loginStudent, msg, pinFromMailbox, SEED_PIN, test } from '../helpers/e2e';
 
 async function fillLogin(page: Page, mobile: string, pin: string) {
@@ -16,7 +16,8 @@ test.describe('P4.02 enrollment → approval → first login → forced PIN chan
     const email = `${mobile}@e2e.local`;
     trackMobile(mobile);
 
-    await page.goto('/enroll');
+    const plan = await makePlan({ active: true });
+    await page.goto(`/enroll?plan=${plan.code}`);
     await page.getByLabel(msg('enroll.form.mobile')).fill(mobile);
     await page.getByLabel(msg('enroll.form.email')).fill(email);
     await page.getByRole('radio', { name: 'bKash' }).click();

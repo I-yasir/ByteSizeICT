@@ -22,7 +22,7 @@ export function StickyEnrollBar() {
     <div className="fixed inset-x-0 bottom-0 z-sticky border-t border-border bg-surface px-4 pt-2 pb-safe shadow-md md:hidden">
       <div className="pb-2">
         <Button asChild size="lg" fullWidth>
-          <Link href="/enroll">{t('enrollNow')}</Link>
+          <Link href="/#pricing">{t('enrollNow')}</Link>
         </Button>
       </div>
     </div>
@@ -58,7 +58,7 @@ export function PublicMobileMenu() {
     { href: '/routine', label: t('nav.routine') },
     { href: '/sample', label: t('nav.sample') },
     { href: '/faq', label: t('nav.faq') },
-    { href: '/enroll', label: t('nav.enroll') },
+    { href: '/#pricing', label: t('nav.enroll') },
   ];
   return (
     <Dialog>

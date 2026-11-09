@@ -6,7 +6,7 @@
 > **Hard constraint (owner):** everything must work on the **free tiers** of Vercel (Hobby), Supabase, Resend and Google Cloud (§3).
 
 ## Current Step
-`V2.30` — Homepage (phase V2-F). **Waiting for the owner's "go".**
+`V2.37` — Clean-start rehearsal (D11) (phase V2-G). **Waiting for the owner's "go".**
 
 ## Progress
 | Phase | Steps | Done |
@@ -17,9 +17,9 @@
 | V2-C Excel import with images | 5 | 5 |
 | V2-D Plan routines (PDF) + plan buttons | 5 | 5 |
 | V2-E Exam audiences by plan | 6 | 6 |
-| V2-F Public site, routine & enrollment flow | 7 | 0 |
+| V2-F Public site, routine & enrollment flow | 7 | 7 |
 | V2-G Regression & rollout | 4 | 0 |
-| **Total** | **41** | **30** |
+| **Total** | **41** | **37** |
 
 ---
 
@@ -158,20 +158,20 @@ Nothing in V2 may require a paid plan. Design rules that follow:
   Verify: CI output. Done: 2026-11-09 — Verified: `pnpm run ci` exit 0 — lint 0 errors (1 known TanStack warning), typecheck, vitest **271/271** (18 files; +1 audience test, −1 auth-matrix case for the removed `searchStudentsForAudience`), pgTAP **164/164** (10 files), i18n 962 keys, answer-leak, Playwright **139 passed** (exam route JS 166.5 KB < 180 KB), secrets.
 
 ### V2-F Public site, routine & enrollment flow (CR4, CR5, CR8, CR9)
-- [ ] **V2.30 Homepage**: remove the next-exam strip + routine section; hero label "Trial exam" (D8); plans section `id="pricing"` with scroll margin.
-  Verify: E2E homepage; axe. Done:
-- [ ] **V2.31 Migration `0019_v2_public_surface.sql`**: revoke anon `select` on `exams` + drop `exams_public_routine`; drop `exams.is_featured` + `exams_one_featured` (D5); remove the routine/next-exam public queries and the builder "Feature" toggle.
-  Verify: RLS-over-HTTP spec: anon `exams` denied; pgTAP; builder has no feature toggle. Done:
-- [ ] **V2.32 Enroll entry points** → `/#pricing` (hero, header, sticky bar, sample-result CTA, login link, footer); smooth scroll on `/` (reduced-motion aware).
-  Verify: E2E: each button lands on `/#pricing`. Done:
-- [ ] **V2.33 Enroll page single plan**: `/enroll?plan=<code>` shows only that plan + payment accounts + form; missing/unknown/inactive → `/#pricing`; renewal path intact.
-  Verify: E2E P4.02/P4.03 updated; renewal green. Done:
-- [ ] **V2.34 `/routine` student part (D4)**: a logged-in student sees "Your routine" (assigned exams, date-grouped, Dhaka time) above the plan routines; the dashboard keeps Next exam + Routine.
-  Verify: E2E: a student sees only their plan's exams; a visitor sees only the plan PDFs. Done:
-- [ ] **V2.35 Copy (D8)**: all free/sample-exam labels → "Trial exam" (bn `ট্রায়াল পরীক্ষা`); new strings for routines/delete/import; `check:i18n`.
-  Verify: `check:i18n` green; grep finds no "ফ্রি স্যাম্পল"/"free sample" in UI strings. Done:
-- [ ] **V2.36 Gate F** `pnpm run ci` (incl. exam-route JS < 180 KB).
-  Verify: CI output. Done:
+- [x] **V2.30 Homepage**: remove the next-exam strip + routine section; hero label "Trial exam" (D8); plans section `id="pricing"` with scroll margin.
+  Verify: E2E homepage; axe. Done: 2026-11-09 — Verified: next-exam strip + routine section removed (components `next-exam-strip.tsx`, `routine-list.tsx` deleted); hero "ট্রায়াল পরীক্ষা দিন" / "Trial exam"; Pricing always renders `id="pricing"` (`scroll-mt-15`; empty state "Plans will be announced soon" + WhatsApp); `html` smooth scroll (instant under reduced motion; `data-scroll-behavior="smooth"` for Next 16) + `ScrollToHash` island. E2E `public-flow.spec.ts`: no `#routine`, hero Trial → `/sample`, Enroll Now → `#pricing` in viewport; `a11y.spec.ts` axe green in light/dark.
+- [x] **V2.31 Migration `0019_v2_public_surface.sql`**: revoke anon `select` on `exams` + drop `exams_public_routine`; drop `exams.is_featured` + `exams_one_featured` (D5); remove the routine/next-exam public queries and the builder "Feature" toggle.
+  Verify: RLS-over-HTTP spec: anon `exams` denied; pgTAP; builder has no feature toggle. Done: 2026-11-09 — Verified: `supabase/migrations/0019_v2_public_surface.sql` (policy dropped, anon grants revoked, `exams_one_featured` + `is_featured` dropped); seed updated (no `is_featured`; sample exam titled "ট্রায়াল পরীক্ষা"). Removed `getNextExam`/`getRoutine`, `setFeaturedExam` (service/action/schema/audit type), builder Feature button, list star, 4 i18n keys. pgTAP `rls.test.sql` (anon `select id, title from exams` → 42501, policy gone, column gone) 165/165; `security.spec.ts` RLS over HTTP: `exams`/`exam_audience_plans` denied to anon; integration: anon client gets 42501 on exams, plans still public; builder test asserts no `setFeaturedExam`/`is_featured`.
+- [x] **V2.32 Enroll entry points** → `/#pricing` (hero, header, sticky bar, sample-result CTA, login link, footer); smooth scroll on `/` (reduced-motion aware).
+  Verify: E2E: each button lands on `/#pricing`. Done: 2026-11-09 — Verified: hero, header, mobile menu, sticky bar, footer (new Enroll link), login link, trial-result CTA and the trial-unavailable state → `/#pricing`. E2E: hero (same page), header (desktop) / sticky bar + menu (mobile), footer, login link (`public-flow.spec.ts`) and the trial-result CTA (`smoke.spec.ts`) each land on `/#pricing` with the section in the viewport.
+- [x] **V2.33 Enroll page single plan**: `/enroll?plan=<code>` shows only that plan + payment accounts + form; missing/unknown/inactive → `/#pricing`; renewal path intact.
+  Verify: E2E P4.02/P4.03 updated; renewal green. Done: 2026-11-09 — Verified: `/enroll` resolves `?plan=<code>` among active plans, else `redirect('/#pricing')`; step 1 shows the plan card (UI §7.23, no Choose) + amount; plan picker removed (`enroll.choosePlan/days/until` keys dropped). E2E: missing/unknown/inactive → `/#pricing`, valid → only that plan, no plan radio group; `/renew` → `&kind=renewal` with the renewal note and the prefilled mobile; P4.02 (`auth.spec.ts`) and P4.03 (`enroll.spec.ts`) use a fixture plan (`makePlan({ active: true })`).
+- [x] **V2.34 `/routine` student part (D4)**: a logged-in student sees "Your routine" (assigned exams, date-grouped, Dhaka time) above the plan routines; the dashboard keeps Next exam + Routine.
+  Verify: E2E: a student sees only their plan's exams; a visitor sees only the plan PDFs. Done: 2026-11-09 — Verified: `/routine` (title "Routine") shows "Your routine" for a logged-in student (`student_exam_cards`, starts ≥ today 00:00 Dhaka, grouped by date: time, title, status, chapter, duration, questions, marks, negative note → `/exams/:id`; empty "No upcoming exams for your plan yet.") above "Plan routines"; new `components/student/routine-days.tsx`. Dashboard keeps Next exam + Upcoming and links "Full routine" → `/routine`. E2E: plan-A student sees the A exam (link to its lobby) and not the B exam; a visitor sees no "Your routine" and neither title.
+- [x] **V2.35 Copy (D8)**: all free/sample-exam labels → "Trial exam" (bn `ট্রায়াল পরীক্ষা`); new strings for routines/delete/import; `check:i18n`.
+  Verify: `check:i18n` green; grep finds no "ফ্রি স্যাম্পল"/"free sample" in UI strings. Done: 2026-11-09 — Verified: nav link, hero, homepage card, enroll-success link, exam badge, `/sample` + result titles, unavailable state, admin list badge and "is sample" label → "Trial exam" / "ট্রায়াল পরীক্ষা" (+ routine/pricing/dashboard strings). `check:i18n` 955 keys in sync; `grep -rniE "ফ্রি স্যাম্পল|free sample|স্যাম্পল" messages src supabase/seed.sql` → 0 hits (3 code comments updated after the gate run).
+- [x] **V2.36 Gate F** `pnpm run ci` (incl. exam-route JS < 180 KB).
+  Verify: CI output. Done: 2026-11-09 — Verified: `pnpm run ci` exit 0 — lint 0 errors (1 known TanStack warning), typecheck, vitest **270/270** (18 files; the routine-query test became the public-surface test, −1 auth-matrix case for `setFeaturedExam`), pgTAP **165/165** (10 files), i18n 955 keys, answer-leak, Playwright **147 passed**, **exam route JS 166.5 KB < 180 KB**, secrets.
 
 ### V2-G Regression & rollout (D10: single cut-over)
 - [ ] **V2.37 Clean-start rehearsal (D11)**: on an isolated empty local stack, apply 0001–0019 with **no seed**, `bootstrap.prod.sql`, Vault secrets, two admins via `create-admin.ts`, then run the V2 app against it with the full E2E suite (as in the P4.23 rehearsal).
@@ -230,3 +230,7 @@ Production gets the whole history (0001–0019) at V2.38 on a reset, empty datab
 | 2026-11-09 | V2.24 | `student_exam_cards` and `start_attempt` are not re-created in 0018. | They are PL/pgSQL and only call `student_is_assigned`, which 0018 rewrites; nothing in them depends on the dropped type or table. | — |
 | 2026-11-09 | V2.25 | `setExamAudience` rejects `plans` with no (existing) plan (`VALIDATION`, field `planIds`), in addition to the publish check. | Otherwise saving would silently hide a published exam from everyone. | — |
 | 2026-11-09 | V2.25 | Test plans (`makePlan`) are created inactive. | The audience rule ignores `is_active`; inactive plans never leak onto cached public pages or into the anon-plans pgTAP check. | — |
+| 2026-11-09 | V2.30 | A tiny `ScrollToHash` client island on the pricing section repeats the `#pricing` scroll after mount; `<html data-scroll-behavior="smooth">`. | `(public)` streams behind `loading.tsx`, so the router's hash scroll ran before the section existed (E2E: URL right, section off-screen); Next 16 needs the attribute to keep route changes instant with CSS smooth scroll. | — |
+| 2026-11-09 | V2.32 | The footer gains an Enroll link (→ `/#pricing`). | CR8 lists the footer among the entry points; it had none. | — |
+| 2026-11-09 | V2.34 | `/routine`'s h1 is "Routine"; sections "Your routine" (students) and "Plan routines". | One page now holds both parts; the old title equalled the plan section heading. | — |
+| 2026-11-09 | V2.31 | `seed.sql` (dev only) drops `is_featured` and renames the sample exam to "ট্রায়াল পরীক্ষা". | The column no longer exists; D8 copy. Production never loads the seed (D11). | — |

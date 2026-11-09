@@ -15,7 +15,6 @@ export type AuditAction =
   | 'exam.publish'
   | 'exam.unpublish'
   | 'exam.archive'
-  | 'exam.feature'
   | 'question.import'
   | 'setting.update'
   | 'plan.upsert'

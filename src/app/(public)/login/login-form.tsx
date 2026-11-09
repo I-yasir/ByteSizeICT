@@ -126,7 +126,7 @@ export function LoginForm({ reason, next, whatsapp, serverNow }: { reason: Login
         </Dialog>
         <span className="text-fg-muted">
           {t('noAccount')}{' '}
-          <Link href="/enroll" className="font-semibold text-primary hover:underline">{t('enrollLink')}</Link>
+          <Link href="/#pricing" className="font-semibold text-primary hover:underline">{t('enrollLink')}</Link>
         </span>
       </div>
     </form>

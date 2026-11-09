@@ -54,7 +54,7 @@
     "results": "Results",
     "profile": "Profile",
     "main": "Main menu",
-    "sample": "Free exam",
+    "sample": "Trial exam",
     "enroll": "Enroll",
     "notifications": "Notifications"
   },
@@ -62,20 +62,13 @@
     "hero": {
       "title": "Master ICT MCQ with Daily Exams",
       "subtitle": "Chapter-wise exams with instant results and step-by-step solutions.",
-      "trySample": "Try a Free Sample Exam",
-      "enroll": "Enroll Now"
+      "enroll": "Enroll Now",
+      "trial": "Trial exam"
     },
     "strip": {
       "next": "Next exam",
       "startsIn": "Starts in",
       "liveLogin": "Live now — log in to take it"
-    },
-    "routine": {
-      "title": "Exam routine",
-      "subtitle": "Exams in the next two weeks",
-      "seeAll": "See full routine",
-      "empty": "New exams will be announced soon.",
-      "followUs": "Follow us on WhatsApp for updates."
     },
     "why": {
       "title": "Why prepare with us",
@@ -137,12 +130,13 @@
       "until": "Access until {date}",
       "viewRoutine": "View routine",
       "downloadRoutine": "Download routine (PDF)",
-      "routineSoon": "Routine coming soon"
+      "routineSoon": "Routine coming soon",
+      "empty": "Plans will be announced soon."
     },
     "sample": {
-      "title": "Try it first",
-      "body": "Take a short free exam without logging in and see how our exams work.",
-      "cta": "Start free exam"
+      "title": "Try a trial exam",
+      "body": "Take a short trial exam without logging in and see how our exams work.",
+      "cta": "Start trial exam"
     },
     "faq": {
       "title": "Frequently asked questions",
@@ -220,20 +214,20 @@
     "noNegative": "No negative marking"
   },
   "routinePage": {
-    "title": "Plan routines",
-    "subtitle": "The exam routine of every plan. View it online or download the PDF.",
+    "title": "Routine",
+    "subtitle": "Exam routines: view or download each plan's routine.",
     "empty": "Plans will be announced soon.",
-    "followUs": "Follow us on WhatsApp for updates."
+    "followUs": "Follow us on WhatsApp for updates.",
+    "yours": "Your routine",
+    "yoursEmpty": "No upcoming exams for your plan yet.",
+    "plans": "Plan routines"
   },
   "enroll": {
     "title": "Enroll",
     "subtitle": "Pay, then fill in the short form below. No name needed.",
     "step1": "Pay",
     "step2": "Submit details",
-    "choosePlan": "Choose a plan",
     "amount": "Amount to pay",
-    "days": "{days} days",
-    "until": "Until {date}",
     "noAccounts": "Payment details will be added soon. Contact us on WhatsApp if you need help.",
     "renewalNote": "You're renewing. Use the same mobile number — no new account is created.",
     "banner": {
@@ -262,7 +256,7 @@
       "email": "You'll get your mobile number and PIN by email.",
       "login": "Log in with your mobile number and PIN, then set your own PIN."
     },
-    "trySample": "Try a sample exam",
+    "trySample": "Take a trial exam",
     "backHome": "Back to home"
   },
   "faqPage": {
@@ -379,7 +373,8 @@
     "missed": "Missed exams",
     "recent": "Recent results",
     "recentEmpty": "Your results will appear here.",
-    "allResults": "All results"
+    "allResults": "All results",
+    "fullRoutine": "Full routine"
   },
   "studentExams": {
     "title": "My exams",
@@ -448,7 +443,7 @@
     "submit": "Submit",
     "cancel": "Cancel",
     "navigator": "Questions",
-    "freeSample": "Free sample",
+    "freeSample": "Trial exam",
     "preview": "Preview",
     "info": "{marks} mark(s) per question · {n} questions.",
     "negative": "−{mark} per wrong answer.",
@@ -524,10 +519,10 @@
     "analysis": "Analysis"
   },
   "sample": {
-    "title": "Free sample exam",
-    "unavailable": "The sample exam isn't available right now.",
+    "title": "Trial exam",
+    "unavailable": "The trial exam isn't available right now.",
     "enroll": "Enroll Now",
-    "resultTitle": "Sample exam result",
+    "resultTitle": "Trial exam result",
     "resultBody": "Enroll for regular exams, rankings and progress tracking."
   },
   "results": {
@@ -969,8 +964,7 @@
       "builder": "Exam builder",
       "all": "All",
       "empty": "No exams.",
-      "featured": "Featured on homepage",
-      "sample": "Sample",
+      "sample": "Trial exam",
       "counts": "{q} questions · {a} attempts"
     },
     "examForm": {
@@ -979,7 +973,7 @@
       "optional": "(optional)",
       "subject": "Subject",
       "chapterLabel": "Chapter label",
-      "isSample": "This is the free sample exam",
+      "isSample": "This is the trial exam",
       "dhakaTime": "All times are in Dhaka (UTC+6).",
       "startsAt": "Starts at",
       "liveEndsAt": "Live window ends",
@@ -1067,9 +1061,6 @@
       "unpublished": "Back to draft",
       "archive": "Archive",
       "archived": "Archived",
-      "feature": "Feature on homepage",
-      "unfeature": "Remove from homepage",
-      "featuredSaved": "Homepage updated",
       "results": "View results",
       "audiencePlans": "Plans",
       "audiencePlansHelp": "Students whose current plan is ticked see this exam. Students without a plan see only exams for all active students.",

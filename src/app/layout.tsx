@@ -45,7 +45,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const [t, messages] = await Promise.all([getTranslations('common'), getMessages()]);
 
   return (
-    <html lang={locale} className={`${hind.variable} ${inter.variable}`} suppressHydrationWarning>
+    <html lang={locale} className={`${hind.variable} ${inter.variable}`} data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className="min-h-dvh">
         <a
           href="#main"

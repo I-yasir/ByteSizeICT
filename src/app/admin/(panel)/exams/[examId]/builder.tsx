@@ -2,7 +2,7 @@
 
 import { closestCenter, DndContext, type DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { ArrowDown, ArrowUp, CircleCheck, CircleX, GripVertical, Plus, Search, Star, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, CircleCheck, CircleX, GripVertical, Plus, Search, X } from 'lucide-react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from '@/lib/i18n/client';
 import { useEffect, useState } from 'react';
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/controls';
 import { Input, Select } from '@/components/ui/field';
-import { archiveExam, publishExam, setExamAudience, setExamQuestions, setFeaturedExam, unpublishExam } from '@/features/exams/actions';
+import { archiveExam, publishExam, setExamAudience, setExamQuestions, unpublishExam } from '@/features/exams/actions';
 import type { ExamPhase } from '@/features/exams/status';
 import { searchBank } from '@/features/questions/actions';
 import { cn } from '@/lib/utils';
@@ -24,7 +24,7 @@ type Plan = { id: string; code: string; name_bn: string; name_en: string; is_act
 type Chapter = { id: string; label: string };
 
 export type BuilderProps = {
-  exam: ExamRow & { status: 'draft' | 'published' | 'archived'; phase: ExamPhase; is_featured: boolean; audience: 'all_active' | 'plans' };
+  exam: ExamRow & { status: 'draft' | 'published' | 'archived'; phase: ExamPhase; audience: 'all_active' | 'plans' };
   locked: boolean;
   attemptCount: number;
   /** computed on the server: the start time has already passed */
@@ -259,11 +259,6 @@ function PublishTab({ exam, questions, attemptCount, startPassed, planIds }: Bui
         {exam.status === 'draft' ? <Button disabled={!ready} loading={pending} onClick={() => run(() => publishExam({ id: exam.id }), { success: t('published') })}>{t('publish')}</Button> : null}
         {exam.status === 'published' && attemptCount === 0 ? <Button variant="secondary" loading={pending} onClick={() => run(() => unpublishExam({ id: exam.id }), { success: t('unpublished') })}>{t('unpublish')}</Button> : null}
         {exam.status === 'published' && exam.phase === 'closed' ? <Button variant="secondary" loading={pending} onClick={() => run(() => archiveExam({ id: exam.id }), { success: t('archived') })}>{t('archive')}</Button> : null}
-        {exam.status === 'published' && !exam.is_sample ? (
-          <Button variant="ghost" loading={pending} leadingIcon={<Star aria-hidden className={cn('size-4', exam.is_featured && 'fill-warning text-warning')} />} onClick={() => run(() => setFeaturedExam({ id: exam.is_featured ? null : exam.id }), { success: t('featuredSaved') })}>
-            {exam.is_featured ? t('unfeature') : t('feature')}
-          </Button>
-        ) : null}
         {attemptCount > 0 ? <Button asChild variant="ghost"><Link href={`/admin/exams/${exam.id}/results`}>{t('results')}</Link></Button> : null}
       </div>
     </div>

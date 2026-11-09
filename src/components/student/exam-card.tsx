@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { InlineCountdown } from './inline-countdown';
 
 /** Exam card status → tag + primary action (docs/02_AppFlow.md §3.5). */
-const TAG: Record<ExamCardData['status'], StatusKind> = {
+export const CARD_TAG: Record<ExamCardData['status'], StatusKind> = {
   completed: 'completed',
   in_progress: 'live',
   locked: 'locked',
@@ -50,7 +50,7 @@ export async function ExamCard({ card, serverNow, prominent = false }: { card: E
           {card.chapterLabel ? <p className="text-sm text-fg-muted">{card.chapterLabel}</p> : null}
           <h3 className={cn('font-semibold text-fg', prominent ? 'text-xl' : 'text-lg')}>{card.title}</h3>
         </div>
-        <StatusTag status={TAG[card.status]}>{t(`status.${card.status}`)}</StatusTag>
+        <StatusTag status={CARD_TAG[card.status]}>{t(`status.${card.status}`)}</StatusTag>
       </div>
       <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-fg-muted">
         <span>{formatDate(card.startsAt, locale, 'dateTime')}</span>

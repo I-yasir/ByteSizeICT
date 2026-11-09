@@ -352,6 +352,8 @@
 @layer base {
   html {
     color-scheme: light;
+    /* "Enroll Now" → /#pricing (CR8); the reduced-motion rule below makes the jump instant. */
+    scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
   }

@@ -12,10 +12,8 @@ import { getAdminOverview, getStudentDashboard } from '@/features/dashboard/quer
 import { getExamLobby, getStudentExamCards } from '@/features/exams/student-queries';
 import {
   getActivePlans,
-  getNextExam,
   getPaymentAccounts,
   getPublicSettings,
-  getRoutine,
 } from '@/features/public/queries';
 import { getExamResultsAdmin } from '@/features/results/admin';
 import { getAttemptResult, listStudentResults } from '@/features/results/queries';
@@ -33,6 +31,8 @@ import {
   studentContext,
 } from '../helpers/fixtures';
 import { authState, requestState } from '../helpers/mocks';
+
+import { supabaseAnon } from '@/lib/supabase/anon';
 
 vi.mock('@/lib/auth/guards', () => import('../helpers/guards-mock'));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn() }));
@@ -753,25 +753,12 @@ describe('dashboards, CSV, settings, public reads (P2.02, P2.03, P2.24, P2.25)',
     await testDb.from('outbox').delete().eq('dedupe_key', failedKey);
   });
 
-  it('public queries: routine groups by Dhaka date and hides drafts/samples', async () => {
+  it('public surface (R1.1 V2.31): visitors cannot read exams at all; plans stay public', async () => {
     const q = bank.questions[0]?.id as string;
-    const startsAt = new Date(Date.now() + 2 * 86_400_000);
-    const published = await makeExam({
-      questionIds: [q],
-      startsAt,
-      liveEndsAt: new Date(startsAt.getTime() + 30 * MIN),
-    });
-    const draft = await makeExam({
-      questionIds: [q],
-      status: 'draft',
-      startsAt,
-      liveEndsAt: new Date(startsAt.getTime() + 30 * MIN),
-    });
-    const routine = await getRoutine();
-    const all = routine.upcoming.flatMap((d) => d.exams.map((e) => e.id));
-    expect(all).toContain(published);
-    expect(all).not.toContain(draft);
-    expect(routine.upcoming.every((d) => /^\d{4}-\d{2}-\d{2}$/.test(d.date))).toBe(true);
-    expect(await getNextExam()).not.toBeNull();
+    await makeExam({ questionIds: [q], startsAt: new Date(Date.now() + 2 * 86_400_000), liveEndsAt: new Date(Date.now() + 2 * 86_400_000 + 30 * MIN) });
+    const exams = await supabaseAnon.from('exams').select('id, title').limit(1);
+    expect(exams.error?.code).toBe('42501');
+    expect(exams.data).toBeNull();
+    expect((await supabaseAnon.from('plans').select('id').limit(1)).error).toBeNull();
   });
 });

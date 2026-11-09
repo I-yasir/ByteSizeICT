@@ -123,7 +123,7 @@ export async function publishExam(adminId: string, id: string): Promise<{ id: st
 export async function unpublishExam(adminId: string, id: string): Promise<{ id: string }> {
   await loadExam(id);
   // exams_lock trigger raises EXAM_LOCKED once attempts exist
-  check(await supabaseAdmin.from('exams').update({ status: 'draft', is_featured: false, published_at: null }).eq('id', id));
+  check(await supabaseAdmin.from('exams').update({ status: 'draft', published_at: null }).eq('id', id));
   await logAdminAudit({ adminId, action: 'exam.unpublish', entityType: 'exam', entityId: id });
   return { id };
 }
@@ -131,19 +131,7 @@ export async function unpublishExam(adminId: string, id: string): Promise<{ id: 
 export async function archiveExam(adminId: string, id: string): Promise<{ id: string }> {
   const exam = await loadExam(id);
   if (computeExamPhase(exam) !== 'closed') throw new ServiceError('VALIDATION', { field: 'status' });
-  check(await supabaseAdmin.from('exams').update({ status: 'archived', is_featured: false }).eq('id', id));
+  check(await supabaseAdmin.from('exams').update({ status: 'archived' }).eq('id', id));
   await logAdminAudit({ adminId, action: 'exam.archive', entityType: 'exam', entityId: id });
-  return { id };
-}
-
-/** One featured exam at most (homepage strip, PRD A-13). `null` clears it. */
-export async function setFeaturedExam(adminId: string, id: string | null): Promise<{ id: string | null }> {
-  if (id) {
-    const exam = await loadExam(id);
-    if (exam.status !== 'published' || exam.is_sample) throw new ServiceError('VALIDATION', { field: 'isFeatured' });
-  }
-  check(await supabaseAdmin.from('exams').update({ is_featured: false }).eq('is_featured', true));
-  if (id) check(await supabaseAdmin.from('exams').update({ is_featured: true }).eq('id', id));
-  await logAdminAudit({ adminId, action: 'exam.feature', entityType: 'exam', entityId: id, meta: { featured: Boolean(id) } });
   return { id };
 }

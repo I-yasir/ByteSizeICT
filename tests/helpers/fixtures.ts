@@ -64,12 +64,12 @@ export async function makeStudent(
   return student;
 }
 
-/** A plan for exam-audience tests (R1.1). Inactive, so it never shows on public pages; the audience
- * rule only looks at the student's plan_id. */
-export async function makePlan(): Promise<{ id: string; code: string }> {
+/** A plan (R1.1). Inactive by default, so it never shows on cached public pages (the audience rule only
+ * looks at the student's plan_id); `active` for enrollment flows, which need a public plan. */
+export async function makePlan(options: { active?: boolean } = {}): Promise<{ id: string; code: string }> {
   const code = `p-${Date.now().toString(36)}-${randomInt(1e6).toString(36)}`;
   const plan = must(
-    await testDb.from('plans').insert({ code, name_bn: `প্ল্যান ${code}`, name_en: `Plan ${code}`, duration_days: 30, price_bdt: 100, sort_order: 900, is_active: false }).select('id, code').single(),
+    await testDb.from('plans').insert({ code, name_bn: `প্ল্যান ${code}`, name_en: `Plan ${code}`, duration_days: 30, price_bdt: 100, sort_order: 900, is_active: options.active ?? false }).select('id, code').single(),
   );
   created.plans.push(plan.id);
   return plan;

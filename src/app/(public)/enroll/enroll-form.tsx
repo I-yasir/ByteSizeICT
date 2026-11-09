@@ -4,18 +4,18 @@ import { track } from '@vercel/analytics';
 import { MessageCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from '@/lib/i18n/client';
-import { type FormEvent, useMemo, useState } from 'react';
+import { type FormEvent, type ReactNode, useMemo, useState } from 'react';
 import { METHOD_LABEL, PaymentMethodBadge } from '@/components/marketing/payment-method-badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { RadioCard, RadioCards, Segmented, SegmentedItem } from '@/components/ui/controls';
+import { Segmented, SegmentedItem } from '@/components/ui/controls';
 import { CopyField } from '@/components/ui/copy-field';
 import { Field, Input } from '@/components/ui/field';
 import { Banner } from '@/components/ui/misc';
 import { useErrorMessage } from '@/components/ui/use-error-message';
 import { submitAdmission } from '@/features/admissions/actions';
 import { submitAdmissionSchema } from '@/features/admissions/schemas';
-import { formatDate, formatNumber, formatTaka } from '@/lib/format';
+import { formatTaka } from '@/lib/format';
 import type { PublicPlan } from '@/features/public/queries';
 
 type Method = keyof typeof METHOD_LABEL;
@@ -31,18 +31,19 @@ type Account = {
 type FieldName = 'mobile' | 'email' | 'method' | 'trxId';
 type FormBanner = 'pending' | 'rateLimited' | 'network' | null;
 
-/** /enroll (PRD V-06/V-07, docs/02_AppFlow.md §4.3). Exactly four fields; no name. */
+/** /enroll (PRD V-06/V-07, docs/02_AppFlow.md §4.3): one plan (CR9), exactly four fields; no name. */
 export function EnrollForm({
-  plans,
+  plan,
+  planSummary,
   accounts,
-  initialPlanId,
   defaultMobile,
   isRenewal,
   whatsapp,
 }: {
-  plans: PublicPlan[];
+  plan: PublicPlan;
+  /** The chosen plan's card, rendered on the server. */
+  planSummary: ReactNode;
   accounts: Account[];
-  initialPlanId: string | null;
   defaultMobile: string;
   isRenewal: boolean;
   whatsapp: string | null;
@@ -52,7 +53,6 @@ export function EnrollForm({
   const locale = useLocale() as 'bn' | 'en';
   const router = useRouter();
 
-  const [planId, setPlanId] = useState<string | null>(initialPlanId);
   const [values, setValues] = useState({ mobile: defaultMobile, email: '', method: '' as Method | '', trxId: '' });
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
   const [trxDuplicate, setTrxDuplicate] = useState(false);
@@ -60,7 +60,6 @@ export function EnrollForm({
   const [submitting, setSubmitting] = useState(false);
 
   const methods = useMemo(() => [...new Set(accounts.map((a) => a.method))], [accounts]);
-  const plan = plans.find((p) => p.id === planId) ?? null;
 
   function validateField(name: FieldName, value: string) {
     const schema = submitAdmissionSchema.shape[name];
@@ -83,7 +82,7 @@ export function EnrollForm({
 
     setSubmitting(true);
     try {
-      const result = await submitAdmission({ ...values, planId });
+      const result = await submitAdmission({ ...values, planId: plan.id });
       if (result.ok) {
         track('enroll_submit');
         router.push('/enroll/success');
@@ -110,34 +109,10 @@ export function EnrollForm({
           <span className="mr-2 inline-flex size-7 items-center justify-center rounded-full bg-primary font-num text-sm text-on-primary">1</span>
           {t('step1')}
         </h2>
-        {plans.length > 0 ? (
-          <RadioCards
-            value={planId ?? ''}
-            onValueChange={(value) => setPlanId(value)}
-            aria-label={t('choosePlan')}
-            className="mb-4 grid gap-2 sm:grid-cols-3"
-          >
-            {plans.map((p) => (
-              <RadioCard key={p.id} value={p.id} className="flex-col items-start gap-1">
-                <span className="font-semibold text-fg">{locale === 'bn' ? p.nameBn : p.nameEn}</span>
-                <span className="font-num text-xl font-bold text-fg">{formatTaka(p.priceBdt, locale)}</span>
-                <span className="text-xs text-fg-muted">
-                  {p.durationDays
-                    ? t('days', { days: formatNumber(p.durationDays, locale) })
-                    : p.fixedExpiresAt
-                      ? t('until', { date: formatDate(p.fixedExpiresAt, locale, 'date') })
-                      : null}
-                </span>
-              </RadioCard>
-            ))}
-          </RadioCards>
-        ) : null}
-
-        {plan ? (
-          <p className="mb-4 rounded-md bg-primary-soft px-4 py-3 text-base text-fg">
-            {t('amount')}: <strong className="font-num text-primary">{formatTaka(plan.priceBdt, locale)}</strong>
-          </p>
-        ) : null}
+        <div className="mb-4 max-w-sm">{planSummary}</div>
+        <p className="mb-4 rounded-md bg-primary-soft px-4 py-3 text-base text-fg">
+          {t('amount')}: <strong className="font-num text-primary">{formatTaka(plan.priceBdt, locale)}</strong>
+        </p>
 
         {accounts.length > 0 ? (
           <ul className="grid gap-3 sm:grid-cols-2">

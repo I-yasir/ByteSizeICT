@@ -1,7 +1,7 @@
 import { randomInt } from 'node:crypto';
 import type { Page } from '@playwright/test';
 import { randomMobile, testDb } from '../helpers/db';
-import { trackMobile } from '../helpers/fixtures';
+import { makePlan, trackMobile } from '../helpers/fixtures';
 import { expect, msg, test } from '../helpers/e2e';
 
 /** P4.03 enrollment validation (docs/02_AppFlow.md §4.3). */
@@ -16,15 +16,18 @@ async function submit(page: Page, fields: { mobile: string; email?: string; trx:
 const trx = () => `QA${randomInt(1e9)}`;
 
 test.describe('P4.03 enrollment validation', () => {
+  // R1.1 (CR9): /enroll needs ?plan=<code> of an active plan.
+  let enrollUrl = '';
   test.beforeEach(async ({ page }) => {
-    await page.goto('/enroll');
+    enrollUrl = `/enroll?plan=${(await makePlan({ active: true })).code}`;
+    await page.goto(enrollUrl);
   });
 
   for (const bad of ['0171234567', '01212345678', '+88012345678901', '1712345678']) {
     test(`rejects mobile ${bad}`, async ({ page }) => {
       await submit(page, { mobile: bad, trx: trx() });
       await expect(page.getByText(msg('errors.mobileInvalid'))).toBeVisible();
-      await expect(page).toHaveURL(/\/enroll$/);
+      await expect(page).toHaveURL(/\/enroll\?plan=/);
     });
   }
 
@@ -47,7 +50,7 @@ test.describe('P4.03 enrollment validation', () => {
     for (const variant of [base.toLowerCase(), `${base.slice(0, 4)} ${base.slice(4)}`, `${base.slice(0, 4)}-${base.slice(4)}`]) {
       const other = randomMobile();
       trackMobile(other);
-      await page.goto('/enroll');
+      await page.goto(enrollUrl);
       await submit(page, { mobile: other, trx: variant });
       await expect(page.getByText(msg('errors.trxDuplicate'))).toBeVisible();
       // the form keeps its values
@@ -60,7 +63,7 @@ test.describe('P4.03 enrollment validation', () => {
     trackMobile(mobile);
     await submit(page, { mobile, trx: trx() });
     await expect(page).toHaveURL(/\/enroll\/success$/);
-    await page.goto('/enroll');
+    await page.goto(enrollUrl);
     await submit(page, { mobile, trx: trx() });
     await expect(page.getByRole('main').getByRole('alert')).toHaveText(msg('enroll.banner.pending'));
   });

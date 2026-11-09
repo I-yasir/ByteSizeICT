@@ -1,4 +1,4 @@
-import { FileText, Plus, Star } from 'lucide-react';
+import { FileText, Plus } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
@@ -35,7 +35,6 @@ export default async function ExamsAdminPage({ searchParams }: { searchParams: P
               <Link href={`/admin/exams/${exam.id}`} className="flex flex-wrap items-center gap-3 rounded-lg bg-surface p-4 shadow-sm hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-focus-ring">
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2 font-semibold text-fg">
-                    {exam.is_featured ? <Star aria-label={t('featured')} className="size-4 fill-warning text-warning" /> : null}
                     {exam.title}
                     {exam.is_sample ? <Badge variant="primary">{t('sample')}</Badge> : null}
                   </span>

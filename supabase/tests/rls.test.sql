@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
-select plan(19);
+select plan(21);
 
 -- Fixtures (as postgres)
 insert into plans (code, name_bn, name_en, duration_days, price_bdt, is_active)
@@ -46,7 +46,8 @@ select throws_ok($$insert into plans (code, name_bn, name_en, duration_days, pri
 
 select is((select array_agg(code order by code) from plans where code like 't-%'), array['t-active'], 'anon sees only active plans');
 select is((select count(*)::int from app_settings where key in ('auth', 'results')), 0, 'anon sees only public settings');
-select is((select array_agg(title order by title) from exams where id::text like '00000000-0000-4000-8000-00000000e00%'), array['Published'], 'anon sees only published non-sample exams');
+-- R1.1 (0019): exams are not public at all, not even published ones.
+select throws_ok('select id, title, starts_at from exams', '42501', null, 'anon cannot read exams (R1.1)');
 select throws_ok('select answers_publish_at from exams', '42501', null, 'anon cannot read non-granted exam columns');
 select throws_ok('select * from exams', '42501', null, 'anon cannot select * from exams');
 select throws_ok($$select public.start_attempt('00000000-0000-4000-8000-00000000e001', gen_random_uuid())$$,
@@ -54,5 +55,8 @@ select throws_ok($$select public.start_attempt('00000000-0000-4000-8000-00000000
 select throws_ok('select public.finalize_overdue_attempts()', '42501', null, 'anon cannot execute finalize_overdue_attempts');
 
 reset role;
+select ok(not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'exams' and policyname = 'exams_public_routine'),
+          'the public routine policy is gone');
+select hasnt_column('public', 'exams', 'is_featured', 'is_featured dropped (D5)');
 select * from finish();
 rollback;

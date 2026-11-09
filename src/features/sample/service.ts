@@ -8,7 +8,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import type { OptionKey, PaperQuestion, ReviewQuestion } from '@/types/domain';
 
 /**
- * Free sample exam (PRD V-05, docs/02_AppFlow.md §4.5): paper without answers; scoring is stateless
+ * Trial (sample) exam (PRD V-05, docs/02_AppFlow.md §4.5): paper without answers; scoring is stateless
  * and server-side. Nothing is stored except rate-limit events.
  */
 async function loadSample() {

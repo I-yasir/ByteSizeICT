@@ -26,7 +26,7 @@ export async function PublicHeader({ brandName, logoUrl }: { brandName: string; 
             <Link href="/login">{t('common.login')}</Link>
           </Button>
           <Button asChild size="sm" className="hidden md:inline-flex">
-            <Link href="/enroll">{t('common.enrollNow')}</Link>
+            <Link href="/#pricing">{t('common.enrollNow')}</Link>
           </Button>
           <PublicMobileMenu />
         </div>

@@ -7,7 +7,6 @@ import {
   examSettingsSchema,
   setExamAudienceSchema,
   setExamQuestionsSchema,
-  setFeaturedSchema,
   updateExamSettingsSchema,
 } from './schemas';
 import * as service from './service';
@@ -40,7 +39,4 @@ export const unpublishExam = adminAction('exams.unpublish', examIdSchema, async 
 );
 export const archiveExam = adminAction('exams.archive', examIdSchema, async (input, { admin }) =>
   refresh(await service.archiveExam(admin.id, input.id)),
-);
-export const setFeaturedExam = adminAction('exams.feature', setFeaturedSchema, async (input, { admin }) =>
-  refresh(await service.setFeaturedExam(admin.id, input.id)),
 );

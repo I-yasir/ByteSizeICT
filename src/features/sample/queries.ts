@@ -1,7 +1,7 @@
 import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
-/** Cheap existence check for the homepage "Try a Free Sample Exam" button. */
+/** Cheap existence check for the homepage "Trial exam" button (D8). */
 export async function hasSampleExam(): Promise<boolean> {
   const { count, error } = await supabaseAdmin
     .from('exams')

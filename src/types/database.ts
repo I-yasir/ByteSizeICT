@@ -472,7 +472,6 @@ export type Database = {
           description: string | null
           duration_minutes: number
           id: string
-          is_featured: boolean
           is_sample: boolean
           late_until: string | null
           live_ends_at: string | null
@@ -502,7 +501,6 @@ export type Database = {
           description?: string | null
           duration_minutes?: number
           id?: string
-          is_featured?: boolean
           is_sample?: boolean
           late_until?: string | null
           live_ends_at?: string | null
@@ -532,7 +530,6 @@ export type Database = {
           description?: string | null
           duration_minutes?: number
           id?: string
-          is_featured?: boolean
           is_sample?: boolean
           late_until?: string | null
           live_ends_at?: string | null

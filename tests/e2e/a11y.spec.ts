@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
+import { testDb } from '../helpers/db';
 import { makeExam, makeQuestionBank } from '../helpers/fixtures';
 import { attemptRow, createStudent, expect, loginStudent, msg, openAttempt, startAttempt, test } from '../helpers/e2e';
 
@@ -15,7 +16,10 @@ test.describe('P4.21 axe scans', () => {
   for (const scheme of ['light', 'dark'] as const) {
     test(`public pages (${scheme})`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
-      for (const path of ['/', '/routine', '/enroll', '/faq', '/privacy', '/login', '/sample']) {
+      // R1.1: /enroll needs an active plan (?plan=<code>).
+      const plan = (await testDb.from('plans').select('code').eq('is_active', true).limit(1).maybeSingle()).data;
+      const enroll = plan ? `/enroll?plan=${plan.code}` : '/enroll';
+      for (const path of ['/', '/routine', enroll, '/faq', '/privacy', '/login', '/sample']) {
         await page.goto(path);
         await page.waitForLoadState('networkidle');
         expect(await seriousViolations(page), path).toEqual([]);

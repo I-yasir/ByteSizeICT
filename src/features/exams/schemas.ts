@@ -33,7 +33,6 @@ export const setExamAudienceSchema = z.object({
   audience: z.enum(['all_active', 'plans']),
   planIds: z.array(uuidSchema).max(50).default([]),
 });
-export const setFeaturedSchema = z.object({ id: uuidSchema.nullable() });
 export const examListSchema = z.object({
   phase: z.enum(['all', 'draft', 'scheduled', 'live', 'late_window', 'closed', 'archived']).default('all'),
 });

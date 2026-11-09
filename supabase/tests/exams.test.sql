@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
-select plan(18);
+select plan(17);
 
 insert into subjects (id, slug, name_bn, name_en) values ('00000000-0000-4000-8000-0000000000a1', 't-ict', 'আইসিটি', 'ICT');
 insert into chapters (id, subject_id, number, name_bn, name_en)
@@ -76,9 +76,6 @@ select throws_ok($$insert into exams (title, starts_at, live_ends_at) values ('B
                  '23514', null, 'live_ends_at must be after starts_at');
 select throws_ok($$insert into exams (title, status) values ('Bad', 'published')$$,
                  '23514', null, 'published non-sample exams need times');
-update exams set is_featured = false where is_featured;
-update exams set is_featured = true where id = '00000000-0000-4000-8000-00000000e001';
-select throws_ok($$update exams set is_featured = true where id = '00000000-0000-4000-8000-00000000e002'$$, '23505', null, 'only one featured exam');
 update exams set status = 'archived' where is_sample;  -- park the seeded sample exam, if any
 select throws_ok($$insert into exams (title, status, is_sample) values ('S1', 'published', true), ('S2', 'published', true)$$,
                  '23505', null, 'only one published sample exam');

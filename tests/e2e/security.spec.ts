@@ -1,4 +1,3 @@
-import { testDb } from '../helpers/db';
 import { makeExam, makeQuestionBank } from '../helpers/fixtures';
 import { api, BASE_URL, createStudent, expect, loginAdmin, loginStudent, msg, SEED_PIN, startAttempt, test } from '../helpers/e2e';
 
@@ -84,20 +83,14 @@ test.describe('P4.16 RLS over HTTP @api', () => {
     }
   });
 
-  test('anon reads only the granted public columns and rows', async () => {
+  test('anon reads only the granted public columns and rows; exams are not public (R1.1)', async () => {
     const plans = await rest('plans?select=code,is_active');
     expect(plans.ok).toBe(true);
     expect(((await plans.json()) as { is_active: boolean }[]).every((p) => p.is_active)).toBe(true);
 
-    const exams = await rest('exams?select=id,title,starts_at');
-    expect(exams.ok).toBe(true);
-    const gated = await rest('exams?select=id,answers_publish_at');
-    expect(gated.ok).toBe(false);
-    // Filtering on an ungranted column is itself denied; check by id that samples and drafts are hidden.
-    expect((await rest('exams?select=id&is_sample=eq.true')).ok).toBe(false);
-    const visible = new Set(((await exams.json()) as { id: string }[]).map((e) => e.id));
-    const hidden = await testDb.from('exams').select('id').or('is_sample.eq.true,status.neq.published');
-    expect((hidden.data ?? []).filter((e) => visible.has(e.id))).toEqual([]);
+    for (const query of ['exams?select=id,title,starts_at', 'exams?select=id,answers_publish_at', 'exam_audience_plans?select=exam_id']) {
+      expect((await rest(query)).ok, query).toBe(false);
+    }
 
     const settings = (await (await rest('app_settings?select=key')).json()) as { key: string }[];
     expect(settings.map((s) => s.key).sort()).not.toContain('auth');

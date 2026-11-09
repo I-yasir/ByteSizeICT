@@ -73,28 +73,6 @@ test.describe('P4.17 admin edge cases', () => {
     expect(stored.data?.correct_option).toBe(question?.correct_option);
     await context.close();
   });
-
-  test('featuring an exam unfeatures the previous one', async ({ browser }) => {
-    const bank = await makeQuestionBank(1);
-    const first = await makeExam({ questionIds: bank.questions.map((q) => q.id), startsAt: new Date(Date.now() + 86_400_000), liveEndsAt: new Date(Date.now() + 90_000_000) });
-    const second = await makeExam({ questionIds: bank.questions.map((q) => q.id), startsAt: new Date(Date.now() + 86_400_000), liveEndsAt: new Date(Date.now() + 90_000_000) });
-    const previous = await testDb.from('exams').select('id').eq('is_featured', true).maybeSingle();
-    const { context, page } = await adminPage(browser);
-    try {
-      for (const examId of [first, second]) {
-        await page.goto(`/admin/exams/${examId}`);
-        await page.getByRole('tab', { name: msg('admin.builder.tabs.publish') }).click();
-        await page.getByRole('button', { name: msg('admin.builder.feature') }).click();
-        await expect(page.getByRole('button', { name: msg('admin.builder.unfeature') })).toBeVisible();
-      }
-      const featured = await testDb.from('exams').select('id').eq('is_featured', true);
-      expect(featured.data?.map((e) => e.id)).toEqual([second]);
-    } finally {
-      await testDb.from('exams').update({ is_featured: false }).eq('id', second);
-      if (previous.data) await testDb.from('exams').update({ is_featured: true }).eq('id', previous.data.id);
-      await context.close();
-    }
-  });
 });
 
 test.describe('R1.1 question deletion (V2.12)', () => {
