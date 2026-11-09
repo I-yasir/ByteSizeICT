@@ -32,6 +32,7 @@ export const ERROR_CODES = [
   'IMPORT_TOO_LARGE',
   'IMPORT_IMAGE_INVALID',
   'IMPORT_IMAGE_UNSUPPORTED',
+  'ROUTINE_PDF_REQUIRED',
   'INTERNAL',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];

@@ -3,7 +3,7 @@ import type { z } from 'zod';
 import { logAdminAudit } from '@/features/audit/log';
 import { check, ServiceError, unwrap } from '@/lib/actions';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { PUBLIC_ASSETS_BUCKET } from '@/lib/supabase/storage';
+import { PLAN_ROUTINES_BUCKET, PUBLIC_ASSETS_BUCKET } from '@/lib/supabase/storage';
 import type { Json } from '@/types/database';
 import {
   PUBLIC_SETTING_KEYS,
@@ -29,7 +29,19 @@ export async function updateSetting(adminId: string, key: SettingKey, raw: unkno
   return { key };
 }
 
+/** The browser uploads the PDF itself; only accept a path that really exists in the bucket. */
+async function assertRoutineUploaded(path: string) {
+  const name = path.slice('plans/'.length);
+  const files = unwrap(await supabaseAdmin.storage.from(PLAN_ROUTINES_BUCKET).list('plans', { search: name, limit: 1 }));
+  if (!files.some((file) => file.name === name)) throw new ServiceError('VALIDATION', { field: 'routinePdfPath' });
+}
+
 export async function upsertPlan(adminId: string, plan: z.output<typeof planSchema>): Promise<{ id: string }> {
+  if (!plan.id && !plan.routinePdfPath) throw new ServiceError('ROUTINE_PDF_REQUIRED', { field: 'routinePdfPath' });
+  if (plan.routinePdfPath) await assertRoutineUploaded(plan.routinePdfPath);
+  const previous = plan.id && plan.routinePdfPath
+    ? unwrap(await supabaseAdmin.from('plans').select('routine_pdf_path').eq('id', plan.id).single()).routine_pdf_path
+    : null;
   const row = {
     code: plan.code,
     name_bn: plan.nameBn,
@@ -41,6 +53,7 @@ export async function upsertPlan(adminId: string, plan: z.output<typeof planSche
     is_highlighted: plan.isHighlighted,
     is_active: plan.isActive,
     sort_order: plan.sortOrder,
+    ...(plan.routinePdfPath ? { routine_pdf_path: plan.routinePdfPath } : {}),
   };
   const result = plan.id
     ? await supabaseAdmin.from('plans').update(row).eq('id', plan.id).select('id').single()
@@ -48,7 +61,19 @@ export async function upsertPlan(adminId: string, plan: z.output<typeof planSche
   if (result.error?.code === '23505') throw new ServiceError('VALIDATION', { field: 'code' });
   const { id } = unwrap(result);
   await logAdminAudit({ adminId, action: 'plan.upsert', entityType: 'plan', entityId: id, after: row as Json });
+  // A replaced routine is no longer linked anywhere; removing it is best effort.
+  if (previous && previous !== plan.routinePdfPath) {
+    const { error } = await supabaseAdmin.storage.from(PLAN_ROUTINES_BUCKET).remove([previous]);
+    if (error) console.error(JSON.stringify({ level: 'warn', context: 'settings.plan.routine', path: previous, error: error.message }));
+  }
   return { id };
+}
+
+/** Signed upload of a routine PDF straight to the public bucket (≤ 5 MB, application/pdf: bucket limits). */
+export async function createRoutineUploadUrl() {
+  const path = `plans/${crypto.randomUUID()}.pdf`;
+  const data = unwrap(await supabaseAdmin.storage.from(PLAN_ROUTINES_BUCKET).createSignedUploadUrl(path));
+  return { path, signedUrl: data.signedUrl };
 }
 
 /** Plans are never hard-deleted (admissions reference them); deactivation hides them publicly. */

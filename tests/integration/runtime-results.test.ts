@@ -38,6 +38,20 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn() }
 vi.mock('next/server', () => import('../helpers/next-server-mock'));
 vi.mock('next/headers', () => import('../helpers/next-headers-mock'));
 
+const ok = <T>(result: { ok: true; data: T } | { ok: false; error: { code: string } }): T => {
+  if (!result.ok) throw new Error(`expected ok, got ${result.error.code}`);
+  return result.data;
+};
+
+/** What Settings → Plans does in the browser: signed URL, then PUT the PDF straight to Storage. */
+async function uploadRoutinePdf(): Promise<string> {
+  const signed = ok(await settingsActions.createRoutineUploadUrl({}));
+  const pdf = Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n');
+  const response = await fetch(signed.signedUrl, { method: 'PUT', headers: { 'content-type': 'application/pdf' }, body: pdf });
+  if (!response.ok) throw new Error(`routine upload failed: ${response.status}`);
+  return signed.path;
+}
+
 const ORIGIN = 'http://localhost:3000';
 const MIN = 60_000;
 let bank: Awaited<ReturnType<typeof makeQuestionBank>>;
@@ -543,6 +557,49 @@ describe('sample exam (P2.23)', () => {
 });
 
 describe('dashboards, CSV, settings, public reads (P2.02, P2.03, P2.24, P2.25)', () => {
+  it('plan routine PDFs (R1.1 V2.20–V2.21, D6): required on create, replaceable, public', async () => {
+    authState.admin = admin;
+    const base = { nameBn: 'রুটিন', nameEn: 'Routine', durationDays: 30, fixedExpiresAt: null, priceBdt: 500 };
+    const code = `r-${Date.now().toString(36)}`;
+    expect(await settingsActions.upsertPlan({ ...base, code })).toMatchObject({
+      ok: false, error: { code: 'ROUTINE_PDF_REQUIRED', field: 'routinePdfPath', message: 'errors.routinePdfRequired' },
+    });
+    expect(await settingsActions.upsertPlan({ ...base, code, routinePdfPath: `plans/${crypto.randomUUID()}.pdf` })).toMatchObject({
+      ok: false, error: { code: 'VALIDATION', field: 'routinePdfPath' }, // not uploaded
+    });
+    expect(await settingsActions.upsertPlan({ ...base, code, routinePdfPath: 'elsewhere/x.pdf' })).toMatchObject({ ok: false, error: { code: 'VALIDATION' } });
+
+    const first = await uploadRoutinePdf();
+    const created = await settingsActions.upsertPlan({ ...base, code, routinePdfPath: first });
+    if (!created.ok) throw new Error(created.error.code);
+    try {
+      const publicPlan = (await getActivePlans()).find((p) => p.code === code);
+      expect(publicPlan?.routine?.view).toContain(`/storage/v1/object/public/plan-routines/${first}`);
+      expect(publicPlan?.routine?.download).toContain('download');
+      const response = await fetch(publicPlan?.routine?.view ?? '');
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toBe('application/pdf');
+
+      // Editing without a new file keeps the PDF; a new file replaces it and the old one is removed.
+      ok(await settingsActions.upsertPlan({ ...base, id: created.data.id, code, priceBdt: 600 }));
+      expect((await testDb.from('plans').select('routine_pdf_path').eq('id', created.data.id).single()).data?.routine_pdf_path).toBe(first);
+      const second = await uploadRoutinePdf();
+      ok(await settingsActions.upsertPlan({ ...base, id: created.data.id, code, routinePdfPath: second }));
+      expect((await testDb.from('plans').select('routine_pdf_path').eq('id', created.data.id).single()).data?.routine_pdf_path).toBe(second);
+      const remaining = (await testDb.storage.from('plan-routines').list('plans', { limit: 1000 })).data?.map((f) => `plans/${f.name}`) ?? [];
+      expect(remaining).toContain(second);
+      expect(remaining).not.toContain(first);
+
+      // A legacy plan (created before R1.1, no PDF) can still be edited and stays public without a routine.
+      await testDb.from('plans').update({ routine_pdf_path: null }).eq('id', created.data.id);
+      ok(await settingsActions.upsertPlan({ ...base, id: created.data.id, code }));
+      expect((await getActivePlans()).find((p) => p.code === code)?.routine).toBeNull();
+      await testDb.storage.from('plan-routines').remove([second]);
+    } finally {
+      await testDb.from('plans').delete().eq('id', created.data.id);
+    }
+  });
+
   it('student dashboard stats and results list', async () => {
     const ids = bank.questions.slice(0, 2).map((q) => q.id) as [string, string];
     const examId = await makeExam({ questionIds: ids });
@@ -615,6 +672,7 @@ describe('dashboards, CSV, settings, public reads (P2.02, P2.03, P2.24, P2.25)',
       durationDays: 7,
       fixedExpiresAt: null,
       priceBdt: 99,
+      routinePdfPath: await uploadRoutinePdf(),
     });
     if (!plan.ok) throw new Error(plan.error.code);
     expect((await getActivePlans()).map((p) => p.code)).toContain(code);
@@ -626,6 +684,7 @@ describe('dashboards, CSV, settings, public reads (P2.02, P2.03, P2.24, P2.25)',
         durationDays: 7,
         fixedExpiresAt: null,
         priceBdt: 1,
+        routinePdfPath: await uploadRoutinePdf(),
       }),
     ).toMatchObject({
       ok: false,

@@ -134,7 +134,10 @@
       "popular": "জনপ্রিয়",
       "choose": "এই প্ল্যান নিন",
       "days": "{days} দিনের অ্যাক্সেস",
-      "until": "{date} পর্যন্ত অ্যাক্সেস"
+      "until": "{date} পর্যন্ত অ্যাক্সেস",
+      "viewRoutine": "রুটিন দেখুন",
+      "downloadRoutine": "রুটিন ডাউনলোড (PDF)",
+      "routineSoon": "রুটিন শিগগিরই আসছে"
     },
     "sample": {
       "title": "আগে একবার চেষ্টা করে দেখুন",
@@ -177,6 +180,7 @@
     "importTooLarge": "ফাইলটি অনেক বড়। সর্বোচ্চ 2,000 সারি ও 20 MB।",
     "importImageInvalid": "ফাইলের একটি ছবি সঠিক নয়।",
     "importImageUnsupported": "এই ধরনের ছবি সমর্থিত নয়। Insert → Pictures → Place over Cells ব্যবহার করুন।",
+    "routinePdfRequired": "সংরক্ষণের আগে প্ল্যানের রুটিন PDF আপলোড করুন।",
     "internal": "কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।",
     "mobileInvalid": "সঠিক মোবাইল নম্বর দিন (01XXXXXXXXX)।",
     "emailInvalid": "সঠিক ইমেইল ঠিকানা দিন।",
@@ -216,10 +220,9 @@
     "noNegative": "নেগেটিভ মার্কিং নেই"
   },
   "routinePage": {
-    "title": "পরীক্ষার রুটিন",
-    "subtitle": "সব আসন্ন পরীক্ষা, তারিখ অনুযায়ী সাজানো।",
-    "recent": "গত ৭ দিনের পরীক্ষা",
-    "empty": "শীঘ্রই নতুন পরীক্ষার ঘোষণা দেওয়া হবে।",
+    "title": "প্ল্যান রুটিন",
+    "subtitle": "প্রতিটি প্ল্যানের পরীক্ষার রুটিন। অনলাইনে দেখুন বা PDF ডাউনলোড করুন।",
+    "empty": "শিগগিরই প্ল্যান ঘোষণা করা হবে।",
     "followUs": "আপডেট পেতে হোয়াটসঅ্যাপে আমাদের সাথে থাকুন।"
   },
   "enroll": {
@@ -1179,7 +1182,17 @@
       "pendingJobs": "অপেক্ষমাণ কাজ",
       "failedJobs": "ব্যর্থ কাজ",
       "retryFailed": "ব্যর্থগুলো আবার চেষ্টা",
-      "retried": "আবার চেষ্টার জন্য পাঠানো হয়েছে"
+      "retried": "আবার চেষ্টার জন্য পাঠানো হয়েছে",
+      "routinePdf": "রুটিন PDF",
+      "routineHelpNew": "আবশ্যক। PDF, সর্বোচ্চ 5 MB। প্ল্যান কার্ড ও রুটিন পেজে দেখানো হয়।",
+      "routineHelpEdit": "PDF, সর্বোচ্চ 5 MB। বদলাতে নতুন ফাইল আপলোড করুন।",
+      "routineUpload": "PDF আপলোড করুন",
+      "routineReplace": "PDF বদলান",
+      "routineUploading": "আপলোড হচ্ছে…",
+      "routineCurrent": "বর্তমান রুটিন",
+      "routineMissing": "রুটিন PDF নেই",
+      "routineTooLarge": "PDF ফাইলটি 5 MB-এর চেয়ে বড়।",
+      "routineNotPdf": "একটি PDF ফাইল বেছে নিন।"
     },
     "audit": {
       "apply": "প্রয়োগ",

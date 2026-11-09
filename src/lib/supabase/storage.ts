@@ -5,6 +5,8 @@ export const QUESTION_MEDIA_BUCKET = 'question-media';
 export const PUBLIC_ASSETS_BUCKET = 'public-assets';
 /** R1.1: rows JSON of browser-parsed imports (private, deleted on commit/cancel or after 24 h). */
 export const IMPORT_UPLOADS_BUCKET = 'import-uploads';
+/** R1.1: public plan routine PDFs (`plans/<uuid>.pdf`, ≤ 5 MB). */
+export const PLAN_ROUTINES_BUCKET = 'plan-routines';
 
 /**
  * Signs private question-media paths (TRD §9.3). Returns a map path → URL; unknown/failed paths are
@@ -31,4 +33,11 @@ export async function signQuestionMedia(
 export function publicAssetUrl(path: string | null | undefined): string | null {
   if (!path) return null;
   return supabaseAdmin.storage.from(PUBLIC_ASSETS_BUCKET).getPublicUrl(path).data.publicUrl;
+}
+
+/** Public routine PDF URLs: `view` opens in the browser, `download` sets Content-Disposition: attachment. */
+export function planRoutineUrls(path: string | null | undefined): { view: string; download: string } | null {
+  if (!path) return null;
+  const bucket = supabaseAdmin.storage.from(PLAN_ROUTINES_BUCKET);
+  return { view: bucket.getPublicUrl(path).data.publicUrl, download: bucket.getPublicUrl(path, { download: true }).data.publicUrl };
 }

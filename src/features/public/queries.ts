@@ -2,7 +2,7 @@ import 'server-only';
 import { SETTING_DEFAULTS, type SettingKey, type SettingValue, settingSchemas } from '@/features/settings/schemas';
 import { unwrap } from '@/lib/actions';
 import { supabaseAnon } from '@/lib/supabase/anon';
-import { publicAssetUrl } from '@/lib/supabase/storage';
+import { planRoutineUrls, publicAssetUrl } from '@/lib/supabase/storage';
 import { addDays, dhakaDateKey, startOfDhakaDay } from '@/lib/time';
 
 /**
@@ -105,7 +105,7 @@ export async function getActivePlans() {
   const rows = unwrap(
     await supabaseAnon
       .from('plans')
-      .select('id, code, name_bn, name_en, duration_days, fixed_expires_at, price_bdt, features, is_highlighted, sort_order')
+      .select('id, code, name_bn, name_en, duration_days, fixed_expires_at, price_bdt, features, is_highlighted, sort_order, routine_pdf_path')
       .eq('is_active', true)
       .order('sort_order'),
   );
@@ -119,6 +119,7 @@ export async function getActivePlans() {
     priceBdt: plan.price_bdt,
     features: (Array.isArray(plan.features) ? plan.features : []) as { bn: string; en: string }[],
     isHighlighted: plan.is_highlighted,
+    routine: planRoutineUrls(plan.routine_pdf_path),
   }));
 }
 export type PublicPlan = Awaited<ReturnType<typeof getActivePlans>>[number];

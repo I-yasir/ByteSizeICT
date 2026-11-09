@@ -1,12 +1,15 @@
-import { CalendarX, ChevronDown, MessageCircle } from 'lucide-react';
+import { CalendarX, MessageCircle } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { RoutineList } from '@/components/marketing/routine-list';
+import { PlanCard } from '@/components/marketing/plan-card';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/misc';
-import { getPublicSettings, getRoutine } from '@/features/public/queries';
+import { getActivePlans, getPublicSettings } from '@/features/public/queries';
 
-/** /routine (docs/02_AppFlow.md §4.2). */
+/**
+ * /routine (docs/02_AppFlow.md §4.2, D4): every active plan's routine PDF. Exams are no longer public
+ * (CR5); a logged-in student's personal routine is added above this list in V2.34.
+ */
 export const revalidate = 60;
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -14,15 +17,21 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RoutinePage() {
-  const [t, routine, settings] = await Promise.all([getTranslations('routinePage'), getRoutine(), getPublicSettings()]);
+  const [t, plans, settings] = await Promise.all([getTranslations('routinePage'), getActivePlans(), getPublicSettings()]);
   return (
     <div className="mx-auto max-w-marketing px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
       <h1 className="text-2xl font-bold text-fg lg:text-3xl">{t('title')}</h1>
       <p className="mt-1 text-base text-fg-muted">{t('subtitle')}</p>
 
       <div className="mt-6">
-        {routine.upcoming.length > 0 ? (
-          <RoutineList days={routine.upcoming} />
+        {plans.length > 0 ? (
+          <ul className="grid gap-4 md:grid-cols-3">
+            {plans.map((plan) => (
+              <li key={plan.id}>
+                <PlanCard plan={plan} routineFallback />
+              </li>
+            ))}
+          </ul>
         ) : (
           <EmptyState
             icon={<CalendarX />}
@@ -38,18 +47,6 @@ export default async function RoutinePage() {
           />
         )}
       </div>
-
-      {routine.recent.length > 0 ? (
-        <details className="group mt-10">
-          <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 text-base font-semibold text-fg-muted">
-            <ChevronDown aria-hidden className="size-5 transition-transform duration-180 group-open:rotate-180" />
-            {t('recent')}
-          </summary>
-          <div className="mt-4 opacity-80">
-            <RoutineList days={routine.recent} />
-          </div>
-        </details>
-      ) : null}
     </div>
   );
 }

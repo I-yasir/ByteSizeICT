@@ -668,6 +668,7 @@ export type Database = {
           name_bn: string
           name_en: string
           price_bdt: number
+          routine_pdf_path: string | null
           sort_order: number
           updated_at: string
         }
@@ -683,6 +684,7 @@ export type Database = {
           name_bn: string
           name_en: string
           price_bdt: number
+          routine_pdf_path?: string | null
           sort_order?: number
           updated_at?: string
         }
@@ -698,6 +700,7 @@ export type Database = {
           name_bn?: string
           name_en?: string
           price_bdt?: number
+          routine_pdf_path?: string | null
           sort_order?: number
           updated_at?: string
         }

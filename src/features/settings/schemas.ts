@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { optionalIsoDateTime, optionalText, paymentMethodSchema, uuidSchema } from '@/lib/validation';
 
+export const ROUTINE_PDF_PATH = /^plans\/[0-9a-f-]{36}\.pdf$/;
+export const MAX_ROUTINE_PDF_BYTES = 5 * 1024 * 1024;
+
 /** app_settings value shapes (docs/05_Schema.md §4.1). Isomorphic. */
 const localized = (max: number) => z.object({ bn: z.string().trim().min(1).max(max), en: z.string().trim().min(1).max(max) });
 const optionalUrl = z.url().max(300).nullable();
@@ -59,6 +62,8 @@ export const planSchema = z
     isHighlighted: z.boolean().default(false),
     isActive: z.boolean().default(true),
     sortOrder: z.number().int().min(0).max(1000).default(0),
+    /** Required on create (ROUTINE_PDF_REQUIRED, D6); omitted on edit keeps the current PDF. */
+    routinePdfPath: z.string().regex(ROUTINE_PDF_PATH, 'errors.validation').optional(),
   })
   .refine((plan) => (plan.durationDays === null) !== (plan.fixedExpiresAt === null), {
     path: ['durationDays'],

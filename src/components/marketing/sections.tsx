@@ -1,14 +1,13 @@
 import { BookOpen, CalendarCheck, CreditCard, Lightbulb, Mail, PlayCircle, Quote, RotateCcw, Trophy, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Accordion, AccordionItem } from '@/components/ui/controls';
 import { SectionHeading } from '@/components/ui/misc';
 import type { PublicPlan } from '@/features/public/queries';
+import { PlanCard } from './plan-card';
 import type { SettingValue } from '@/features/settings/schemas';
-import { formatDate, formatNumber, formatTaka } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /** Homepage sections 4–9 (docs/02_AppFlow.md §4.1). */
@@ -132,7 +131,6 @@ export async function HowItWorks() {
 export async function Pricing({ plans }: { plans: PublicPlan[] }) {
   if (plans.length === 0) return null;
   const t = await getTranslations('home.pricing');
-  const locale = (await getLocale()) as 'bn' | 'en';
   return (
     <Section id="pricing">
       <div id="pricing-title">
@@ -141,33 +139,7 @@ export async function Pricing({ plans }: { plans: PublicPlan[] }) {
       <ul className="grid gap-4 md:grid-cols-3">
         {plans.map((plan) => (
           <li key={plan.id}>
-            <Card className={cn('flex h-full flex-col gap-3', plan.isHighlighted && 'ring-2 ring-primary')}>
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-lg font-semibold text-fg">{locale === 'bn' ? plan.nameBn : plan.nameEn}</h3>
-                {plan.isHighlighted ? <Badge variant="primary">{t('popular')}</Badge> : null}
-              </div>
-              <p className="font-num text-4xl font-bold text-fg">{formatTaka(plan.priceBdt, locale)}</p>
-              <p className="text-sm text-fg-muted">
-                {plan.durationDays
-                  ? t('days', { days: formatNumber(plan.durationDays, locale) })
-                  : plan.fixedExpiresAt
-                    ? t('until', { date: formatDate(plan.fixedExpiresAt, locale, 'date') })
-                    : null}
-              </p>
-              {plan.features.length > 0 ? (
-                <ul className="flex flex-col gap-1.5 text-sm text-fg">
-                  {plan.features.map((feature, i) => (
-                    <li key={i} className="flex gap-2">
-                      <span aria-hidden className="text-success">✓</span>
-                      {feature[locale]}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              <Button asChild variant={plan.isHighlighted ? 'primary' : 'secondary'} fullWidth className="mt-auto">
-                <Link href={`/enroll?plan=${encodeURIComponent(plan.code)}`}>{t('choose')}</Link>
-              </Button>
-            </Card>
+            <PlanCard plan={plan} />
           </li>
         ))}
       </ul>

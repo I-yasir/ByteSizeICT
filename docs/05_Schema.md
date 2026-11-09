@@ -157,7 +157,7 @@ create table plans (
   is_highlighted    boolean not null default false,
   is_active         boolean not null default true,
   sort_order        integer not null default 0,
-  routine_pdf_path  text,                    -- R1.1 (0017): 'plans/<uuid>.pdf' in bucket plan-routines; required on create (app rule), nullable for legacy plans
+  routine_pdf_path  text check (routine_pdf_path is null or routine_pdf_path ~ '^plans/[0-9a-f-]{36}\.pdf$'),  -- R1.1 (0017): bucket plan-routines; required on create (app rule), nullable for legacy plans
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now(),
   constraint plans_duration_xor check ((duration_days is null) <> (fixed_expires_at is null))

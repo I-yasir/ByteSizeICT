@@ -23,6 +23,7 @@ export const upsertPlan = adminAction('settings.plan', planSchema, async (input,
 export const deletePlan = adminAction('settings.deletePlan', z.object({ id: z.uuid() }), async (input, { admin }) =>
   refreshPublic(await service.deletePlan(admin.id, input.id)),
 );
+export const createRoutineUploadUrl = adminAction('settings.routineUpload', z.object({}), async () => service.createRoutineUploadUrl());
 export const upsertPaymentAccount = adminAction('settings.paymentAccount', paymentAccountSchema, async (input, { admin }) =>
   refreshPublic(await service.upsertPaymentAccount(admin.id, input)),
 );

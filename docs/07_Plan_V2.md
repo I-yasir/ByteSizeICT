@@ -6,7 +6,7 @@
 > **Hard constraint (owner):** everything must work on the **free tiers** of Vercel (Hobby), Supabase, Resend and Google Cloud (§3).
 
 ## Current Step
-`V2.19` — Migration `0017_v2_plan_routines.sql` (phase V2-D). **Waiting for the owner's "go".**
+`V2.24` — Migration `0018_v2_exam_audience_plans.sql` (phase V2-E). **Waiting for the owner's "go".**
 
 ## Progress
 | Phase | Steps | Done |
@@ -15,11 +15,11 @@
 | V2-A Question model cleanup | 6 | 6 |
 | V2-B Question deletion | 4 | 4 |
 | V2-C Excel import with images | 5 | 5 |
-| V2-D Plan routines (PDF) + plan buttons | 5 | 0 |
+| V2-D Plan routines (PDF) + plan buttons | 5 | 5 |
 | V2-E Exam audiences by plan | 6 | 0 |
 | V2-F Public site, routine & enrollment flow | 7 | 0 |
 | V2-G Regression & rollout | 4 | 0 |
-| **Total** | **41** | **19** |
+| **Total** | **41** | **24** |
 
 ---
 
@@ -132,16 +132,16 @@ Nothing in V2 may require a paid plan. Design rules that follow:
   Verify: E2E `import.spec.ts` with an image workbook; CI output. Done: 2026-11-09 — Verified: `import-wizard.tsx`: parsing → upload progress bar (files done/total) → validating → preview (valid / invalid / duplicates / **pictures**), per-cell picture problems in the table and the error CSV (translated), Cancel at every step (deletes staged files), result line with picture count; 17 bn + en keys, 2 new error codes (`IMPORT_IMAGE_INVALID`, `IMPORT_IMAGE_UNSUPPORTED`), 20 MB limit text. E2E `import.spec.ts` (+2): picture workbook (counts, `two_pictures` row, import, editor render) and the 16.3 MB workbook with Cancel. **Gate C** `pnpm run ci` exit 0 — lint 0 errors (1 known TanStack warning), typecheck, vitest **269/269** (18 files), pgTAP **139/139** (8 files), i18n 947 keys, answer-leak, Playwright **137 passed** (exam route JS 166.5 KB < 180 KB), secrets.
 
 ### V2-D Plan routines (CR6) + plan buttons (CR7)
-- [ ] **V2.19 Migration `0017_v2_plan_routines.sql`**: `plans.routine_pdf_path text`; public bucket `plan-routines` (`application/pdf`, ≤ 5 MB). pgTAP (anon reads plan rows incl. the path; cannot write the bucket).
-  Verify: `db:test` green. Done:
-- [ ] **V2.20 Settings → Plans**: signed upload of the PDF; required on create (`ROUTINE_PDF_REQUIRED`); replace on edit; warning badge on active plans without a PDF (D6).
-  Verify: integration + E2E: create without PDF rejected; with PDF saved; warning shown for legacy plans. Done:
-- [ ] **V2.21 Plan card**: "রুটিন দেখুন / View routine" (new tab) + download link above "Choose this plan"; hidden without a PDF; every "Choose this plan" button `primary` (CR7, Decision Log exception to UI §1).
-  Verify: E2E: button only with a PDF; PDF URL returns 200 `application/pdf`; axe green in both themes. Done:
-- [ ] **V2.22 Public `/routine` (D4, visitor part)**: every active plan with its routine (view + download); plans without a PDF show "Routine coming soon".
-  Verify: E2E as a visitor. Done:
-- [ ] **V2.23 Gate D** `pnpm run ci`.
-  Verify: CI output. Done:
+- [x] **V2.19 Migration `0017_v2_plan_routines.sql`**: `plans.routine_pdf_path text`; public bucket `plan-routines` (`application/pdf`, ≤ 5 MB). pgTAP (anon reads plan rows incl. the path; cannot write the bucket).
+  Verify: `db:test` green. Done: 2026-11-09 — Verified: `supabase/migrations/0017_v2_plan_routines.sql`: `plans.routine_pdf_path` (check `^plans/<uuid>.pdf$`), public bucket `plan-routines` (5 MB, `application/pdf`). `supabase/tests/plan_routines.test.sql` (9): column, bucket public/5 MB/PDF-only, path check, anon reads an active plan's path, anon insert into the bucket → 42501 and nothing written, anon update of plans → 42501. `db:reset && db:types && db:test` 148/148.
+- [x] **V2.20 Settings → Plans**: signed upload of the PDF; required on create (`ROUTINE_PDF_REQUIRED`); replace on edit; warning badge on active plans without a PDF (D6).
+  Verify: integration + E2E: create without PDF rejected; with PDF saved; warning shown for legacy plans. Done: 2026-11-09 — Verified: `createRoutineUploadUrl` (signed upload `plans/<uuid>.pdf`); `upsertPlan` → `ROUTINE_PDF_REQUIRED` (field `routinePdfPath`) on create without a PDF, `VALIDATION` when the path isn't in the bucket, keeps the PDF when an edit sends none, removes the replaced file (best effort); new error code + `errors.routinePdfRequired`. Plans tab: PDF field (≤ 5 MB + `%PDF-` check in the browser, direct PUT), current-routine link, Replace, inline error, warning badge "No routine PDF" on active plans without one; 11 bn + en keys. Integration (`runtime-results.test.ts`): required/unknown/bad path errors, create, public view URL → 200 `application/pdf`, download URL, keep on edit, replace removes the old file, legacy plan editable without a PDF. E2E `plans.spec.ts`: save without PDF shows the error, with PDF saves, legacy plan shows the badge.
+- [x] **V2.21 Plan card**: "রুটিন দেখুন / View routine" (new tab) + download link above "Choose this plan"; hidden without a PDF; every "Choose this plan" button `primary` (CR7, Decision Log exception to UI §1).
+  Verify: E2E: button only with a PDF; PDF URL returns 200 `application/pdf`; axe green in both themes. Done: 2026-11-09 — Verified: `components/marketing/plan-card.tsx` (UI §7.23): View routine (`secondary`, new tab, `noopener noreferrer`) + Download link (`?download` → `Content-Disposition: attachment`) above **Choose this plan**, now `primary` on every card (was secondary unless highlighted); `getActivePlans` returns `routine {view, download}`; homepage Pricing uses the card. E2E `plans.spec.ts`: button only on the plan with a PDF, above Choose, every Choose `bg-primary`, PDF URL 200 `application/pdf`, download has `attachment`, axe 0 serious/critical on `/` in light and dark.
+- [x] **V2.22 Public `/routine` (D4, visitor part)**: every active plan with its routine (view + download); plans without a PDF show "Routine coming soon".
+  Verify: E2E as a visitor. Done: 2026-11-09 — Verified: `/routine` now lists every active plan as a plan card (View/Download routine or "Routine coming soon", Choose → `/enroll?plan=<code>`); the public exam schedule is gone from this page (homepage section and query removed in V2.30/V2.31; student part in V2.34). E2E `plans.spec.ts` as a visitor: plan with PDF links to the same public URL, legacy plan shows "Routine coming soon", Choose link, axe green in light and dark; `a11y.spec.ts` public scan green.
+- [x] **V2.23 Gate D** `pnpm run ci`.
+  Verify: CI output. Done: 2026-11-09 — Verified: `pnpm run ci` exit 0 — lint 0 errors (1 known TanStack warning), typecheck, vitest **271/271** (18 files), pgTAP **148/148** (9 files), i18n 960 keys, answer-leak, Playwright **138 passed** (exam route JS 166.5 KB < 180 KB), secrets. (A first run failed pgTAP "anon sees only active plans" on three `t-…` plans left in the local DB by an earlier failed integration run; removed, re-run green.)
 
 ### V2-E Exam audiences by plan (CR1)
 - [ ] **V2.24 Migration `0018_v2_exam_audience_plans.sql`**: new enum `('all_active','plans')` swapped in for `exam_audience` (existing `selected` → `all_active`); table `exam_audience_plans(exam_id → exams cascade, plan_id → plans restrict, PK)` with RLS forced; drop `exam_assignees`; rewrite `student_is_assigned` (`all_active` → true; `plans` → the student's `plan_id` is among the exam's plans) and `set_exam_audience(p_exam_id, p_audience, p_plan_ids)`; recreate dependants (`student_exam_cards`, `start_attempt`); grants. pgTAP.
@@ -225,3 +225,5 @@ Production gets the whole history (0001–0019) at V2.38 on a reset, empty datab
 | 2026-11-09 | V2.16 | Duplicate lookup chunks 100 hashes per request (was 300). | 300 × 64-char hashes exceeded PostgREST's URL limit ("URI too long") — a latent V1 bug for imports above ~150 rows, found by the 300-row test. | — |
 | 2026-11-09 | V2.17 | CSV files may carry the image column headers, but CSV cells never produce pictures (values ignored). | D7: CSV is text-only; accepting the headers lets one header row serve both formats. | — |
 | 2026-11-09 | V2.18 | CSP `img-src`/`connect-src` add the `NEXT_PUBLIC_SUPABASE_URL` origin when it isn't `*.supabase.co` (was: `127.0.0.1:54321` in dev only). | Browser uploads and signed images need the local Storage origin under `next start` (E2E); production is unchanged (`*.supabase.co`). | TRD §10.9 |
+| 2026-11-09 | V2.20 | `upsertPlan` accepts a routine path only if the object exists in `plan-routines`; an edit without a new path keeps the current PDF (no way to remove it); a replaced PDF is deleted best-effort. | The browser uploads the file itself, so the server must not trust the path; D6 makes the PDF required for new plans, so removal isn't offered. | Schema §4 (path check) |
+| 2026-11-09 | V2.22 | `/routine` drops the public exam schedule now (not in V2.31); the cards there keep **Choose this plan**. | D4/AppFlow §4.2 define `/routine` as plan routines only, and §4.2 says each plan links to `/enroll?plan=` (AppFlow outranks UI §7.23's "without Choose this plan"). The homepage schedule and `getRoutine` stay until V2.30/V2.31. | — |

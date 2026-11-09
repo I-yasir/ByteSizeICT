@@ -1,6 +1,6 @@
 'use client';
 
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { FileText, Pencil, Plus, Trash2, TriangleAlert } from 'lucide-react';
 import { useLocale, useTranslations } from '@/lib/i18n/client';
 import { useState } from 'react';
 import { useAction } from '@/components/admin/use-action';
@@ -11,12 +11,13 @@ import { Checkbox, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components
 import { Dialog, DialogActions, DialogContent } from '@/components/ui/dialog';
 import { Field, Input, Select, Textarea } from '@/components/ui/field';
 import { notify } from '@/components/ui/toast';
-import { createAssetUploadUrl, deletePlan, retryFailedOutbox, updateSetting, upsertPaymentAccount, upsertPlan } from '@/features/settings/actions';
-import type { SettingKey, SettingValue } from '@/features/settings/schemas';
+import { createAssetUploadUrl, createRoutineUploadUrl, deletePlan, retryFailedOutbox, updateSetting, upsertPaymentAccount, upsertPlan } from '@/features/settings/actions';
+import { MAX_ROUTINE_PDF_BYTES, type SettingKey, type SettingValue } from '@/features/settings/schemas';
+import { useErrorMessage } from '@/components/ui/use-error-message';
 import { formatDate, fromDhakaInput, toDhakaInput } from '@/lib/format';
 
 type AllSettings = { [K in SettingKey]: SettingValue<K> };
-type Plan = { id: string; code: string; name_bn: string; name_en: string; duration_days: number | null; fixed_expires_at: string | null; price_bdt: number; features: unknown; is_highlighted: boolean; is_active: boolean; sort_order: number };
+type Plan = { id: string; code: string; name_bn: string; name_en: string; duration_days: number | null; fixed_expires_at: string | null; price_bdt: number; features: unknown; is_highlighted: boolean; is_active: boolean; sort_order: number; routine_pdf_path: string | null; routineUrl: string | null };
 type Account = { id: string; method: 'bkash' | 'nagad' | 'rocket' | 'bank'; account_number: string; account_label: string | null; account_holder: string | null; instructions_bn: string | null; instructions_en: string | null; is_active: boolean; sort_order: number };
 type Integrations = { pendingCount: number; failedCount: number; lastSheetSyncAt: string | null; failures: { id: number; kind: string; attempts: number; last_error: string | null; created_at: string }[] };
 
@@ -144,10 +145,11 @@ function PaymentsTab({ accounts }: { accounts: Account[] }) {
 function PlansTab({ plans }: { plans: Plan[] }) {
   const t = useTranslations('admin.settings');
   const locale = useLocale() as 'bn' | 'en';
+  const errorText = useErrorMessage();
   const { run, pending } = useAction();
-  type Draft = { id?: string; code: string; nameBn: string; nameEn: string; kind: 'days' | 'fixed'; durationDays: string; fixedExpiresAt: string; priceBdt: string; features: string; isHighlighted: boolean; isActive: boolean; sortOrder: string };
+  type Draft = { id?: string; routineUrl?: string | null; routinePdfPath?: string; routineName?: string; code: string; nameBn: string; nameEn: string; kind: 'days' | 'fixed'; durationDays: string; fixedExpiresAt: string; priceBdt: string; features: string; isHighlighted: boolean; isActive: boolean; sortOrder: string };
   const toDraft = (p?: Plan): Draft => ({
-    ...(p ? { id: p.id } : {}),
+    ...(p ? { id: p.id, routineUrl: p.routineUrl } : {}),
     code: p?.code ?? '',
     nameBn: p?.name_bn ?? '',
     nameEn: p?.name_en ?? '',
@@ -161,6 +163,31 @@ function PlansTab({ plans }: { plans: Plan[] }) {
     sortOrder: String(p?.sort_order ?? plans.length + 1),
   });
   const [editing, setEditing] = useState<Draft | null>(null);
+  const [routineError, setRoutineError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const edit = (draft: Draft | null) => {
+    setRoutineError(null);
+    setEditing(draft);
+  };
+
+  /** Routine PDF (D6): ≤ 5 MB, checked by its `%PDF-` header, uploaded straight to Storage. */
+  async function uploadRoutine(file: File) {
+    setRoutineError(null);
+    if (file.size > MAX_ROUTINE_PDF_BYTES) return setRoutineError(t('routineTooLarge'));
+    const head = new TextDecoder().decode(await file.slice(0, 5).arrayBuffer());
+    if (head !== '%PDF-') return setRoutineError(t('routineNotPdf'));
+    setUploading(true);
+    try {
+      const signed = await run(() => createRoutineUploadUrl({}), { refresh: false });
+      if (!signed.ok) return;
+      const response = await fetch(signed.data.signedUrl, { method: 'PUT', headers: { 'content-type': 'application/pdf' }, body: file }).catch(() => null);
+      if (!response?.ok) return setRoutineError(t('uploadFailed'));
+      setEditing((d) => (d ? { ...d, routinePdfPath: signed.data.path, routineName: file.name } : d));
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function save(d: Draft) {
     const features = d.features
       .split('\n')
@@ -181,10 +208,13 @@ function PlansTab({ plans }: { plans: Plan[] }) {
           isHighlighted: d.isHighlighted,
           isActive: d.isActive,
           sortOrder: Number(d.sortOrder),
+          ...(d.routinePdfPath ? { routinePdfPath: d.routinePdfPath } : {}),
         }),
-      { success: t('saved') },
+      { success: t('saved'), silentError: true },
     );
-    if (result.ok) setEditing(null);
+    if (result.ok) return edit(null);
+    if (result.error.field === 'routinePdfPath') setRoutineError(errorText(result.error));
+    else notify.error(errorText(result.error));
   }
   return (
     <div className="flex max-w-app flex-col gap-3">
@@ -195,15 +225,18 @@ function PlansTab({ plans }: { plans: Plan[] }) {
             <span className="text-sm text-fg-muted">{p.duration_days ? t('daysN', { n: p.duration_days }) : p.fixed_expires_at ? formatDate(p.fixed_expires_at, locale, 'date') : ''}</span>
             {p.is_highlighted ? <Badge variant="primary" className="ml-2">{t('highlighted')}</Badge> : null}
             {!p.is_active ? <Badge className="ml-2">{t('inactive')}</Badge> : null}
+            {p.is_active && !p.routine_pdf_path ? (
+              <Badge variant="warning" className="ml-2"><TriangleAlert aria-hidden className="mr-1 inline size-3.5" />{t('routineMissing')}</Badge>
+            ) : null}
           </span>
           <span className="flex">
-            <Button size="icon" variant="ghost" aria-label={t('edit')} onClick={() => setEditing(toDraft(p))}><Pencil aria-hidden className="size-4" /></Button>
+            <Button size="icon" variant="ghost" aria-label={t('edit')} onClick={() => edit(toDraft(p))}><Pencil aria-hidden className="size-4" /></Button>
             {p.is_active ? <Button size="icon" variant="ghost" aria-label={t('deactivate')} onClick={() => run(() => deletePlan({ id: p.id }), { success: t('saved') })}><Trash2 aria-hidden className="size-4" /></Button> : null}
           </span>
         </Card>
       ))}
-      <Button variant="secondary" className="self-start" leadingIcon={<Plus aria-hidden className="size-4" />} onClick={() => setEditing(toDraft())}>{t('addPlan')}</Button>
-      <Dialog open={editing !== null} onOpenChange={(o) => !o && setEditing(null)}>
+      <Button variant="secondary" className="self-start" leadingIcon={<Plus aria-hidden className="size-4" />} onClick={() => edit(toDraft())}>{t('addPlan')}</Button>
+      <Dialog open={editing !== null} onOpenChange={(o) => !o && edit(null)}>
         {editing ? (
           <DialogContent title={editing.id ? t('editPlan') : t('addPlan')}>
             <div className="flex flex-col gap-3">
@@ -221,10 +254,27 @@ function PlansTab({ plans }: { plans: Plan[] }) {
               <Field label={t('sortOrder')}>{(p) => <Input {...p} type="number" min={0} value={editing.sortOrder} onChange={(e) => setEditing({ ...editing, sortOrder: e.target.value })} />}</Field>
               <Checkbox label={t('highlighted')} checked={editing.isHighlighted} onCheckedChange={(v) => setEditing({ ...editing, isHighlighted: v === true })} />
               <Checkbox label={t('active')} checked={editing.isActive} onCheckedChange={(v) => setEditing({ ...editing, isActive: v === true })} />
+              <Field label={t('routinePdf')} helper={editing.id ? t('routineHelpEdit') : t('routineHelpNew')} error={routineError}>
+                {(p) => (
+                  <div className="flex flex-wrap items-center gap-3">
+                    {editing.routineName ? (
+                      <span className="inline-flex items-center gap-1.5 text-sm text-fg"><FileText aria-hidden className="size-4 text-fg-muted" />{editing.routineName}</span>
+                    ) : editing.routineUrl ? (
+                      <a href={editing.routineUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary underline">
+                        <FileText aria-hidden className="size-4" />{t('routineCurrent')}
+                      </a>
+                    ) : null}
+                    <label className="inline-flex min-h-11 cursor-pointer items-center rounded-md border border-border-strong px-4 text-sm font-semibold hover:bg-surface-2">
+                      {uploading ? t('routineUploading') : editing.routineName || editing.routineUrl ? t('routineReplace') : t('routineUpload')}
+                      <input {...p} type="file" accept="application/pdf" className="sr-only" disabled={uploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadRoutine(f); e.target.value = ''; }} />
+                    </label>
+                  </div>
+                )}
+              </Field>
             </div>
             <DialogActions>
-              <Button variant="secondary" onClick={() => setEditing(null)}>{t('cancel')}</Button>
-              <Button loading={pending} onClick={() => save(editing)}>{t('save')}</Button>
+              <Button variant="secondary" onClick={() => edit(null)}>{t('cancel')}</Button>
+              <Button loading={pending} disabled={uploading} onClick={() => save(editing)}>{t('save')}</Button>
             </DialogActions>
           </DialogContent>
         ) : null}
