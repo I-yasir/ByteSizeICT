@@ -3,7 +3,12 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as examActions from '@/features/exams/actions';
 import { getExamForBuilder, getExamPreview, listExamsAdmin } from '@/features/exams/queries';
-import { buildErrorReportCsv, buildTemplateCsv, buildTemplateXlsx, parseImportFile } from '@/features/questions/import';
+import ExcelJS from 'exceljs';
+import { POST as cleanupRoute } from '@/app/api/internal/imports/cleanup/route';
+import { buildErrorReportCsv, buildTemplateCsv, buildTemplateXlsx, cleanupStaleImports } from '@/features/questions/import';
+import { IMAGE_CONTENT_TYPES, type ImportPayload, stagedImagePath } from '@/lib/import/columns';
+import { parseImportFile } from '@/lib/import/parse';
+import { signQuestionMedia } from '@/lib/supabase/storage';
 import * as questionActions from '@/features/questions/actions';
 import { getQuestionForEdit, searchQuestions } from '@/features/questions/queries';
 import * as taxonomyActions from '@/features/taxonomy/actions';
@@ -11,6 +16,7 @@ import { getTaxonomy } from '@/features/taxonomy/queries';
 import { testDb } from '../helpers/db';
 import { cleanup, makeAdmin, makeExam, makeQuestionBank, makeStudent, trackExam, trackQuestion } from '../helpers/fixtures';
 import { authState } from '../helpers/mocks';
+import { buildWorkbook, makePng, questionRow, toArrayBuffer } from '../helpers/xlsx';
 
 vi.mock('@/lib/auth/guards', () => import('../helpers/guards-mock'));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn() }));
@@ -185,15 +191,42 @@ describe('question deletion (R1.1 V2.10–V2.11, D3)', () => {
   });
 });
 
-describe('bulk import (P2.14, R1.1 V2.07)', () => {
+describe('bulk import (P2.14, R1.1 V2.07, V2.15–V2.17)', () => {
   // The R1 template (15 columns) — still accepted; its five removed columns are ignored (D9).
   const legacyHeader = 'subject,chapter_number,topic,stem,option_a,option_b,option_c,option_d,correct,explanation,difficulty,type,source,board_year,tags';
   const header = 'subject,chapter_number,topic,stem,option_a,option_b,option_c,option_d,correct,explanation';
-  const csvFile = (lines: string[], head = legacyHeader) => {
-    const form = new FormData();
-    form.set('file', new File([`${head}\n${lines.join('\n')}\n`], 'questions.csv', { type: 'text/csv' }));
-    return form;
-  };
+  const csv = (lines: string[], head = legacyHeader) => Buffer.from(`${head}\n${lines.join('\n')}\n`, 'utf8');
+  const media = () => testDb.storage.from('question-media');
+  const uploads = () => testDb.storage.from('import-uploads');
+  const stagedNames = async (batchId: string) => ((await media().list(`staging/${batchId}`)).data ?? []).map((f) => f.name);
+
+  /** Does what the wizard does in the browser: parse, get signed URLs, PUT pictures then rows JSON. */
+  async function stage(name: string, file: Buffer, tamper?: (payload: ImportPayload) => void): Promise<string> {
+    const parsed = await parseImportFile({ name, bytes: toArrayBuffer(file) });
+    const batchId = crypto.randomUUID();
+    const payload: ImportPayload = {
+      version: 1,
+      fileName: name,
+      headers: parsed.headers,
+      rows: parsed.rows,
+      images: parsed.images.map((img) => ({ row: img.row, column: img.column, path: stagedImagePath(batchId, img.row, img.column, img.ext) })),
+      imageIssues: parsed.imageIssues,
+    };
+    tamper?.(payload);
+    const files = [
+      ...parsed.images.map((img) => ({ spec: { kind: 'image' as const, row: img.row, column: img.column, ext: img.ext }, body: Buffer.from(img.bytes), type: IMAGE_CONTENT_TYPES[img.ext] })),
+      { spec: { kind: 'rows' as const }, body: Buffer.from(JSON.stringify(payload)), type: 'application/json' },
+    ];
+    for (let i = 0; i < files.length; i += 50) {
+      const chunk = files.slice(i, i + 50);
+      const signed = ok(await questionActions.createImportUploadUrls({ batchId, files: chunk.map((f) => f.spec) }));
+      await Promise.all(chunk.map(async (f, j) => {
+        const response = await fetch(signed[j]?.signedUrl ?? '', { method: 'PUT', headers: { 'content-type': f.type }, body: f.body });
+        expect(response.ok).toBe(true);
+      }));
+    }
+    return batchId;
+  }
 
   it('legacy file: previews good, invalid and duplicate rows, ignores the removed columns, commits valid rows with topics', async () => {
     const s = `imp-${crypto.randomUUID().slice(0, 8)}`;
@@ -208,15 +241,16 @@ describe('bulk import (P2.14, R1.1 V2.07)', () => {
       `${bank.slug},1,,"bad answer",a,b,c,d,E,,,,,,`,
       `${bank.slug},1,,"${s} bad year ignored",a,b,c,d,A,,,,,1999,`, // R1 would reject 1999; the column is now ignored
     ];
-    const preview = ok(await questionActions.previewImport(csvFile(lines)));
-    expect(preview).toMatchObject({ total: 7, valid: 3, invalid: 2, duplicates: 2 });
+    const batchId = await stage('questions.csv', csv(lines));
+    const preview = ok(await questionActions.previewImport({ batchId }));
+    expect(preview).toMatchObject({ importToken: batchId, total: 7, valid: 3, invalid: 2, duplicates: 2, images: 0 });
     expect(preview.ignoredColumns).toEqual(['difficulty', 'type', 'source', 'board_year', 'tags']);
     expect(preview.duplicateRows).toEqual([{ row: 4, reason: 'in_file' }, { row: 5, reason: 'in_bank' }]);
     expect(preview.errors.map((e) => [e.row, e.column])).toEqual([[6, 'chapter_number'], [7, 'correct']]);
     expect(buildErrorReportCsv(preview.errors)).toContain('6,chapter_number,Chapter 9 does not exist');
 
     const result = ok(await questionActions.commitImport({ importToken: preview.importToken as string, defaultStatus: 'draft' }));
-    expect(result).toEqual({ imported: 3, duplicatesSkipped: 2, invalid: 2 });
+    expect(result).toEqual({ imported: 3, duplicatesSkipped: 2, invalid: 2, images: 0 });
     const imported = await searchQuestions({ q: s, status: ['draft'] });
     expect(imported.total).toBe(3);
     const first = imported.items.find((q) => q.stem.includes('প্রশ্ন ১'));
@@ -224,6 +258,7 @@ describe('bulk import (P2.14, R1.1 V2.07)', () => {
     expect(first?.topic?.name_en).toBe(`New Topic ${s}`);
     expect(first).not.toHaveProperty('tags');
     for (const q of imported.items) trackQuestion(q.id);
+    expect((await uploads().list(batchId)).data).toEqual([]); // rows JSON removed after commit
 
     expect(await questionActions.commitImport({ importToken: preview.importToken as string, defaultStatus: 'draft' })).toMatchObject({
       ok: false, error: { code: 'NOT_FOUND' },
@@ -232,33 +267,145 @@ describe('bulk import (P2.14, R1.1 V2.07)', () => {
 
   it('new 10-column template: imports without a legacy warning', async () => {
     const s = `new-${crypto.randomUUID().slice(0, 8)}`;
-    const preview = ok(await questionActions.previewImport(csvFile([`${bank.slug},1,,"${s} নতুন",a,b,c,d,B,`], header)));
+    const preview = ok(await questionActions.previewImport({ batchId: await stage('q.csv', csv([`${bank.slug},1,,"${s} নতুন",a,b,c,d,B,`], header)) }));
     expect(preview).toMatchObject({ total: 1, valid: 1, invalid: 0, duplicates: 0, ignoredColumns: [] });
     ok(await questionActions.commitImport({ importToken: preview.importToken as string, defaultStatus: 'draft' }));
     for (const q of (await searchQuestions({ q: s, status: ['draft'] })).items) trackQuestion(q.id);
   });
 
-  it('rejects wrong headers, too many rows, and unsupported files', async () => {
-    const wrong = new FormData();
-    wrong.set('file', new File(['question,answer\nx,y\n'], 'q.csv'));
-    expect(await questionActions.previewImport(wrong)).toMatchObject({ ok: false, error: { code: 'IMPORT_BAD_HEADERS' } });
+  it('the server re-checks the staged batch: headers, row count, missing or malformed rows JSON', async () => {
+    const tampered = await stage('q.csv', csv([`${bank.slug},1,,"x",a,b,c,d,B,`], header), (p) => { p.headers = ['question', 'answer']; });
+    expect(await questionActions.previewImport({ batchId: tampered })).toMatchObject({ ok: false, error: { code: 'IMPORT_BAD_HEADERS' } });
 
-    const many = Array.from({ length: 2001 }, (_, i) => `,1,,"q${i}",a,b,c,d,A,,,,,,`);
-    expect(await questionActions.previewImport(csvFile(many))).toMatchObject({ ok: false, error: { code: 'IMPORT_TOO_LARGE' } });
+    const many = await stage('q.csv', csv([`${bank.slug},1,,"x",a,b,c,d,B,`], header), (p) => {
+      p.rows = Array.from({ length: 2001 }, (_, i) => ({ row: i + 2, cells: { stem: `q${i}` } }));
+    });
+    expect(await questionActions.previewImport({ batchId: many })).toMatchObject({ ok: false, error: { code: 'IMPORT_TOO_LARGE' } });
 
-    const pdf = new FormData();
-    pdf.set('file', new File(['%PDF'], 'q.pdf'));
-    expect(await questionActions.previewImport(pdf)).toMatchObject({ ok: false, error: { code: 'IMPORT_BAD_HEADERS' } });
+    expect(await questionActions.previewImport({ batchId: crypto.randomUUID() })).toMatchObject({ ok: false, error: { code: 'NOT_FOUND' } });
+    const garbage = crypto.randomUUID();
+    await uploads().upload(`${garbage}/rows.json`, Buffer.from('{"version":2}'), { contentType: 'application/json' });
+    expect(await questionActions.previewImport({ batchId: garbage })).toMatchObject({ ok: false, error: { code: 'VALIDATION' } });
+    expect(await questionActions.createImportUploadUrls({ batchId: garbage, files: Array.from({ length: 51 }, () => ({ kind: 'rows' })) })).toMatchObject({
+      ok: false, error: { code: 'VALIDATION' },
+    });
+    for (const id of [tampered, many, garbage]) ok(await questionActions.cancelImport({ batchId: id }));
   });
 
-  it('templates round-trip through the parser (CSV and XLSX)', async () => {
-    const csv = await parseImportFile({ name: 't.csv', bytes: new TextEncoder().encode(buildTemplateCsv()).buffer as ArrayBuffer });
-    const xlsx = await parseImportFile({ name: 't.xlsx', bytes: await buildTemplateXlsx() });
-    expect(buildTemplateCsv().split('\n')[0]?.replace(/^\uFEFF/, '')).toBe(header);
-    expect(csv.rows).toHaveLength(1);
-    expect(csv.ignoredColumns).toEqual([]);
-    expect(xlsx.rows[0]).toEqual(csv.rows[0]);
-    expect(csv.rows[0]?.stem).toContain('এর দশমিক মান');
+  it('pictures: anchored images import with their rows, image-only options work, bad cells are reported per cell', async () => {
+    const s = `pic-${crypto.randomUUID().slice(0, 8)}`;
+    const png = makePng(10, 6, [200, 30, 30]);
+    const file = await buildWorkbook({
+      rows: [
+        { ...questionRow(`${s} stem picture`), subject: bank.slug, chapter_number: '1' },
+        { ...questionRow(`${s} image-only B`, { option_b: '' }), subject: bank.slug, chapter_number: '1', explanation: 'see figure' },
+        { ...questionRow(`${s} two pictures`), subject: bank.slug, chapter_number: '1' },
+        { ...questionRow(`${s} missing upload`), subject: bank.slug, chapter_number: '1' },
+        { ...questionRow(`${s} no text no picture`, { option_c: '' }), subject: bank.slug, chapter_number: '1' },
+      ],
+      pictures: [
+        { row: 2, column: 'stem_image', bytes: png },
+        { row: 3, column: 'option_b_image', bytes: png },
+        { row: 3, column: 'explanation_image', bytes: makePng(4, 4) },
+        { row: 4, column: 'stem_image', bytes: png },
+        { row: 4, column: 'stem_image', bytes: makePng(3, 3) },
+        { row: 5, column: 'option_a_image', bytes: png },
+      ],
+    });
+    const batchId = await stage('pictures.xlsx', file);
+    expect((await stagedNames(batchId)).sort()).toEqual(['2-stem_image.png', '3-explanation_image.png', '3-option_b_image.png', '5-option_a_image.png']);
+    await media().remove([`staging/${batchId}/5-option_a_image.png`]); // the browser claims it, Storage doesn't have it
+
+    const preview = ok(await questionActions.previewImport({ batchId }));
+    expect(preview).toMatchObject({ total: 5, valid: 2, invalid: 3, duplicates: 0, images: 3 });
+    expect(preview.errors.map((e) => [e.row, e.column, e.image ?? e.message])).toEqual([
+      [4, 'stem_image', 'two_pictures'],
+      [5, 'option_a_image', 'missing_upload'],
+      [6, 'option_c', 'Enter text or add a picture'],
+    ]);
+
+    const result = ok(await questionActions.commitImport({ importToken: batchId, defaultStatus: 'active' }));
+    expect(result).toMatchObject({ imported: 2, images: 3 });
+    const rows = (await testDb.from('questions').select('id, stem, option_b, stem_image_path, option_b_image_path, explanation_image_path').like('stem', `${s}%`)).data ?? [];
+    rows.forEach((q) => trackQuestion(q.id));
+    const withStem = rows.find((q) => q.stem.endsWith('stem picture'));
+    const imageOnly = rows.find((q) => q.stem.endsWith('image-only B'));
+    expect(withStem?.stem_image_path).toMatch(/^questions\/[0-9a-f-]{36}\.png$/);
+    expect(imageOnly).toMatchObject({ option_b: '' });
+    expect(imageOnly?.option_b_image_path).toMatch(/^questions\/[0-9a-f-]{36}\.png$/);
+    expect(imageOnly?.explanation_image_path).toMatch(/^questions\/[0-9a-f-]{36}\.png$/);
+
+    // Same signed-URL path the editor preview, the exam paper and the review use.
+    const urls = await signQuestionMedia([withStem?.stem_image_path], 60);
+    const served = await fetch(urls.get(withStem?.stem_image_path ?? '') ?? '');
+    expect(Buffer.from(await served.arrayBuffer()).equals(png)).toBe(true);
+    expect((await getQuestionForEdit(imageOnly?.id ?? ''))?.option_b_image_path).toBe(imageOnly?.option_b_image_path);
+    // Staged leftovers (the bad rows' pictures) and the rows JSON are gone.
+    expect(await stagedNames(batchId)).toEqual([]);
+    expect((await uploads().list(batchId)).data).toEqual([]);
+  });
+
+  it('cancel removes the staged files; the 24 h cleanup removes abandoned ones through the Storage API', async () => {
+    const file = await buildWorkbook({ rows: [{ ...questionRow('cancel me'), subject: bank.slug, chapter_number: '1' }], pictures: [{ row: 2, column: 'stem_image', bytes: makePng() }] });
+    const cancelled = await stage('c.xlsx', file);
+    ok(await questionActions.previewImport({ batchId: cancelled }));
+    expect(ok(await questionActions.cancelImport({ batchId: cancelled }))).toEqual({ removed: 2 });
+    expect(await stagedNames(cancelled)).toEqual([]);
+    expect((await uploads().list(cancelled)).data).toEqual([]);
+    expect(await questionActions.commitImport({ importToken: cancelled, defaultStatus: 'draft' })).toMatchObject({ ok: false, error: { code: 'NOT_FOUND' } });
+
+    const abandoned = await stage('a.xlsx', file);
+    expect(await cleanupStaleImports()).toEqual({ removed: 0 }); // fresh uploads are kept (24 h)
+    expect((await cleanupStaleImports(0)).removed).toBeGreaterThanOrEqual(2);
+    expect(await stagedNames(abandoned)).toEqual([]);
+    expect((await uploads().list(abandoned)).data).toEqual([]);
+
+    const call = (secret?: string) =>
+      cleanupRoute(new Request('http://localhost/api/internal/imports/cleanup', { method: 'POST', headers: secret ? { 'x-cron-secret': secret } : {} }));
+    expect((await call()).status).toBe(401);
+    expect((await call('wrong')).status).toBe(401);
+    const response = await call(process.env.CRON_SECRET);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true, data: { removed: 0 } });
+  });
+
+  it('300 rows with 100 pictures: preview and commit each finish in under 5 s', async () => {
+    const s = `perf-${crypto.randomUUID().slice(0, 8)}`;
+    const rows = Array.from({ length: 300 }, (_, i) => ({ ...questionRow(`${s} q${i}`), subject: bank.slug, chapter_number: '1' }));
+    const pictures = Array.from({ length: 100 }, (_, i) => ({ row: i * 3 + 2, column: 'stem_image', bytes: makePng(6, 6, [i, 100, 200]) }));
+    const batchId = await stage('perf.xlsx', await buildWorkbook({ rows, pictures }));
+
+    let started = performance.now();
+    const preview = ok(await questionActions.previewImport({ batchId }));
+    const previewMs = performance.now() - started;
+    expect(preview).toMatchObject({ valid: 300, images: 100 });
+    started = performance.now();
+    ok(await questionActions.commitImport({ importToken: batchId, defaultStatus: 'draft' }));
+    const commitMs = performance.now() - started;
+    for (const q of (await testDb.from('questions').select('id').like('stem', `${s}%`)).data ?? []) trackQuestion(q.id);
+    console.info(JSON.stringify({ importPerf: { previewMs: Math.round(previewMs), commitMs: Math.round(commitMs) } }));
+    expect(previewMs).toBeLessThan(5000);
+    expect(commitMs).toBeLessThan(5000);
+  });
+
+  it('templates: the XLSX has the image columns and an Instructions sheet; both round-trip through the parser', async () => {
+    const xlsxBytes = await buildTemplateXlsx();
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(xlsxBytes);
+    expect(workbook.worksheets.map((w) => w.name)).toEqual(['questions', 'Instructions']);
+    const instructions = workbook.getWorksheet('Instructions');
+    const text = (instructions?.getColumn(1).values ?? []).join('\n');
+    expect(text).toContain('Place over Cells');
+    expect(text).toContain('1 MB');
+
+    const fromCsv = await parseImportFile({ name: 't.csv', bytes: new TextEncoder().encode(buildTemplateCsv()).buffer as ArrayBuffer });
+    const fromXlsx = await parseImportFile({ name: 't.xlsx', bytes: xlsxBytes });
+    expect(buildTemplateCsv().split('\n')[0]?.replace(/^﻿/, '')).toBe(header);
+    expect(fromXlsx.headers).toEqual([...header.split(','), 'stem_image', 'option_a_image', 'option_b_image', 'option_c_image', 'option_d_image', 'explanation_image']);
+    expect(fromCsv.rows).toHaveLength(1);
+    expect(fromCsv.ignoredColumns).toEqual([]);
+    expect(fromXlsx.rows[0]).toEqual(fromCsv.rows[0]);
+    expect(fromCsv.rows[0]?.cells.stem).toContain('এর দশমিক মান');
   });
 });
 

@@ -636,6 +636,8 @@ select cron.schedule('cleanup-daily', '30 20 * * *',  -- 02:30 Asia/Dhaka
     delete from public.sessions where expires_at < now() - interval '30 days';
     delete from public.outbox where status = 'done' and done_at < now() - interval '30 days';$$);
 ```
+R1.1 (`0016_v2_import_uploads.sql`): `stale_import_uploads(p_older_than interval, p_limit int default 1000) returns table(bucket_id, name)` lists objects in `import-uploads` and `question-media/staging/` older than the interval (read-only on `storage.objects`); `kick_import_cleanup()` (same no-op rules as `kick_outbox`) posts to `<site_url>/api/internal/imports/cleanup` when 24 h-old staged files exist; `select cron.schedule('import-cleanup-kick', '20 * * * *', $$select public.kick_import_cleanup()$$);`. The route deletes through the Storage API.
+
 Vault secrets `site_url` and `cron_secret` are created manually per environment (documented in the runbook; local dev sets them in `seed.sql`).
 
 ---
@@ -686,7 +688,7 @@ Vault secrets `site_url` and `cron_secret` are created manually per environment 
 | `0013_phase2_support.sql` | content-hash function, `correct_rate`, correct-option lock trigger, `question_import_batches`, atomic setters (§8.6) |
 | `0014_v2_drop_question_meta.sql` | R1.1, destructive: drop `questions.difficulty/qtype/source/board_year`, `question_tags`, `tags`, enums `difficulty_level`/`question_type`, `set_question_tags` |
 | `0015_v2_question_delete.sql` | R1.1: `questions.deleted_at/deleted_by`, `questions_live_idx`, `delete_questions` (§8.7), `set_exam_questions` rejects deleted |
-| `0016_v2_import_uploads.sql` | R1.1: bucket `import-uploads`, `question_import_batches.images/staged_paths` |
+| `0016_v2_import_uploads.sql` | R1.1: bucket `import-uploads`, `question_import_batches.images/staged_paths` (batch id = the browser's upload batch id), `stale_import_uploads`, `kick_import_cleanup` + cron `import-cleanup-kick` (§8.5) |
 | `0017_v2_plan_routines.sql` | R1.1: `plans.routine_pdf_path`, public bucket `plan-routines` |
 | `0018_v2_exam_audience_plans.sql` | R1.1, destructive: enum swap `exam_audience` → `('all_active','plans')` (`selected` → `all_active`), `exam_audience_plans`, drop `exam_assignees`, rewrite `student_is_assigned`, `set_exam_audience` and dependants |
 | `0019_v2_public_surface.sql` | R1.1, destructive: revoke anon `select` on `exams` + drop `exams_public_routine`; drop `exams.is_featured` + `exams_one_featured` |

@@ -3,6 +3,8 @@ import { supabaseAdmin } from './admin';
 
 export const QUESTION_MEDIA_BUCKET = 'question-media';
 export const PUBLIC_ASSETS_BUCKET = 'public-assets';
+/** R1.1: rows JSON of browser-parsed imports (private, deleted on commit/cancel or after 24 h). */
+export const IMPORT_UPLOADS_BUCKET = 'import-uploads';
 
 /**
  * Signs private question-media paths (TRD §9.3). Returns a map path → URL; unknown/failed paths are

@@ -30,6 +30,8 @@ export const ERROR_CODES = [
   'QUESTION_IN_USE',
   'IMPORT_BAD_HEADERS',
   'IMPORT_TOO_LARGE',
+  'IMPORT_IMAGE_INVALID',
+  'IMPORT_IMAGE_UNSUPPORTED',
   'INTERNAL',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];

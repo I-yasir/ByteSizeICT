@@ -58,8 +58,8 @@ openssl rand -hex 32      # CRON_SECRET  (shared by Vercel and Supabase Vault)
 
    ```sql
    select count(*) from pg_tables where schemaname = 'public' and rowsecurity;   -- 22 (every table)
-   select jobname, schedule from cron.job order by jobname;                         -- cleanup-daily, cleanup-import-batches, finalize-overdue-attempts, outbox-kick
-   select id, public from storage.buckets order by id;                             -- public-assets (true), question-media (false)
+   select jobname, schedule from cron.job order by jobname;                         -- cleanup-daily, cleanup-import-batches, finalize-overdue-attempts, import-cleanup-kick (R1.1), outbox-kick
+   select id, public from storage.buckets order by id;                             -- import-uploads (false, R1.1), public-assets (true), question-media (false)
    ```
 
 7. **Vault secrets** used by the `outbox-kick` cron job (Schema §8.5). Use the production site URL (no trailing slash) and the same `CRON_SECRET` you give Vercel:
@@ -240,11 +240,12 @@ Expect `RESTORE OK: <n> tables, <m> rows match the backup.`
 
 ## 8a. Question import guide (admins)
 
-*Admin → Question Bank → Import* (R1.1 V2-A; images in Excel arrive with V2-C):
+*Admin → Question Bank → Import* (R1.1):
 
-- **Columns** (download the template from the import page): `subject` (optional slug; default = first subject), `chapter_number`, `topic` (created if missing), `stem`, `option_a`–`option_d`, `correct` (A–D), `explanation`.
+- **Columns** (download the template from the import page): `subject` (optional slug; default = first subject), `chapter_number`, `topic` (created if missing), `stem`, `option_a`–`option_d`, `correct` (A–D), `explanation`; Excel only: `stem_image`, `option_a_image`…`option_d_image`, `explanation_image`.
+- **Pictures (Excel only):** click the image cell of that row, then *Insert → Pictures → Place over Cells* (not *Place in Cell*, which can't be read); keep the picture's top-left corner inside the cell; one picture per cell; PNG/JPG/WebP ≤ 1 MB. An option's text may be empty when it has a picture. The template's *Instructions* sheet repeats this. Picture problems are listed per cell (row + column) in the preview and the error CSV.
 - **Removed in R1.1:** difficulty, type, source, board year and tags no longer exist anywhere in the question bank. Old spreadsheets that still have those columns import normally; the preview shows a notice that those columns were ignored.
-- **Limits today:** `.csv` or `.xlsx`, ≤ 2,000 rows, text only. Note: until V2-C ships direct-to-storage uploads, files larger than about 1 MB fail to upload (Server Action body limit) — split big files.
+- **Limits:** `.xlsx` or `.csv` (text only), ≤ 2,000 rows, ≤ 20 MB. The browser reads the file and uploads it straight to Storage (progress bar), so large files don't hit the server's request limits. Cancel deletes the uploaded files; abandoned uploads are deleted automatically after 24 h (cron `import-cleanup-kick`).
 - Duplicates (same normalised text as another question or another row) are skipped; invalid rows are listed with row number and column and can be downloaded as a CSV.
 
 ---

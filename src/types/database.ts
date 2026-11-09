@@ -709,7 +709,9 @@ export type Database = {
           created_at: string
           expires_at: string
           id: string
+          images: Json
           rows: Json
+          staged_paths: string[]
           summary: Json
         }
         Insert: {
@@ -717,7 +719,9 @@ export type Database = {
           created_at?: string
           expires_at?: string
           id?: string
+          images?: Json
           rows: Json
+          staged_paths?: string[]
           summary: Json
         }
         Update: {
@@ -725,7 +729,9 @@ export type Database = {
           created_at?: string
           expires_at?: string
           id?: string
+          images?: Json
           rows?: Json
+          staged_paths?: string[]
           summary?: Json
         }
         Relationships: [
@@ -1273,6 +1279,7 @@ export type Database = {
         Returns: undefined
       }
       finalize_overdue_attempts: { Args: never; Returns: number }
+      kick_import_cleanup: { Args: never; Returns: number }
       kick_outbox: { Args: never; Returns: number }
       log_audit: {
         Args: {
@@ -1356,6 +1363,13 @@ export type Database = {
       set_exam_questions: {
         Args: { p_exam_id: string; p_question_ids: string[] }
         Returns: number
+      }
+      stale_import_uploads: {
+        Args: { p_limit?: number; p_older_than: unknown }
+        Returns: {
+          bucket_id: string
+          name: string
+        }[]
       }
       start_attempt: {
         Args: { p_exam_id: string; p_student_id: string }

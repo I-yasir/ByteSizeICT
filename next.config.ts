@@ -4,15 +4,25 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const withNextIntl = createNextIntlPlugin('./src/lib/i18n/request.ts');
 
 const isDev = process.env.NODE_ENV !== 'production';
+// The project's own Storage origin: covered by *.supabase.co in production, but a local stack
+// (dev, `next start` in E2E) serves signed image and upload URLs from http://127.0.0.1:54321.
+const supabaseOrigin = (() => {
+  try {
+    const origin = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').origin;
+    return origin.endsWith('.supabase.co') ? '' : ` ${origin}`;
+  } catch {
+    return '';
+  }
+})();
 
-/** TRD §10.9. Dev additionally needs eval (React Refresh), websockets (HMR) and local Supabase. */
+/** TRD §10.9. Dev additionally needs eval (React Refresh) and websockets (HMR). */
 const contentSecurityPolicy = [
   "default-src 'self'",
-  `img-src 'self' data: blob: https://*.supabase.co${isDev ? ' http://127.0.0.1:54321' : ''}`,
+  `img-src 'self' data: blob: https://*.supabase.co${supabaseOrigin}`,
   "style-src 'self' 'unsafe-inline'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://va.vercel-scripts.com`,
   "font-src 'self' data:",
-  `connect-src 'self' https://*.supabase.co https://va.vercel-scripts.com${isDev ? ' ws: http://127.0.0.1:54321' : ''}`,
+  `connect-src 'self' https://*.supabase.co${supabaseOrigin} https://va.vercel-scripts.com${isDev ? ' ws:' : ''}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { IMAGE_COLUMNS, UPLOAD_URL_BATCH } from '@/lib/import/columns';
 import { optionalText, optionKeySchema, paginationSchema, uuidSchema } from '@/lib/validation';
 
 /** Question bank inputs (PRD A-06…A-09, TRD §10.7 length limits). Isomorphic. */
@@ -56,4 +57,12 @@ export const questionSearchSchema = paginationSchema.extend({
 });
 export type QuestionSearch = z.input<typeof questionSearchSchema>;
 
+/** Browser-side import (TRD §8.12): signed upload URLs, then preview/commit/cancel by batch id. */
+const importUploadFileSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('rows') }),
+  z.object({ kind: z.literal('image'), row: z.number().int().min(2).max(1_048_576), column: z.enum(IMAGE_COLUMNS), ext: z.enum(['png', 'jpg', 'webp']) }),
+]);
+export type ImportUploadFile = z.output<typeof importUploadFileSchema>;
+export const importUploadUrlsSchema = z.object({ batchId: uuidSchema, files: z.array(importUploadFileSchema).min(1).max(UPLOAD_URL_BATCH) });
+export const importBatchSchema = z.object({ batchId: uuidSchema });
 export const commitImportSchema = z.object({ importToken: uuidSchema, defaultStatus: contentStatusSchema.default('draft') });

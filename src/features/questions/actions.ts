@@ -3,9 +3,11 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { adminAction } from '@/lib/actions';
-import { commitImport as commit, parseImportFile, previewImport as preview } from './import';
+import { cancelImport as cancel, commitImport as commit, createImportUploadUrls as uploadUrls, previewImport as preview } from './import';
 import {
   commitImportSchema,
+  importBatchSchema,
+  importUploadUrlsSchema,
   createQuestionSchema,
   mediaUploadSchema,
   questionIdsSchema,
@@ -47,19 +49,18 @@ export const getQuestionUsage = adminAction('questions.usage', z.object({ id: z.
   service.questionUsage(input.id),
 );
 
-/** FormData with a `file` field (CSV/XLSX). */
-const fileSchema = z.instanceof(FormData).transform((form, ctx) => {
-  const file = form.get('file');
-  if (!(file instanceof File)) {
-    ctx.addIssue({ code: 'custom', path: ['file'], message: 'errors.validation' });
-    return z.NEVER;
-  }
-  return file;
-});
+/** The browser parses the file and uploads straight to Storage; these calls carry ids and paths only. */
+export const createImportUploadUrls = adminAction('questions.importUploadUrls', importUploadUrlsSchema, async (input) =>
+  uploadUrls(input.batchId, input.files),
+);
 
-export const previewImport = adminAction('questions.importPreview', fileSchema, async (file, { admin }) => {
-  return preview(admin.id, await parseImportFile({ name: file.name, bytes: await file.arrayBuffer() }));
-});
+export const previewImport = adminAction('questions.importPreview', importBatchSchema, async (input, { admin }) =>
+  preview(admin.id, input.batchId),
+);
+
+export const cancelImport = adminAction('questions.importCancel', importBatchSchema, async (input, { admin }) =>
+  cancel(admin.id, input.batchId),
+);
 
 export const commitImport = adminAction('questions.importCommit', commitImportSchema, async (input, { admin }) =>
   refresh(await commit(admin.id, input)),
