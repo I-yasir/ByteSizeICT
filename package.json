@@ -22,6 +22,8 @@
     "db:test": "supabase test db",
     "db:types": "bash scripts/gen-types.sh",
     "admin:create": "tsx --conditions=react-server scripts/create-admin.ts",
+    "backup:db": "bash scripts/backup-db.sh",
+    "restore:check": "bash scripts/restore-check.sh",
     "email:dev": "email dev --dir emails",
     "check:secrets": "tsx scripts/check-secrets.ts",
     "check:i18n": "tsx scripts/check-i18n.ts",

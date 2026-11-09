@@ -1,6 +1,6 @@
 # 04 — Technical Requirements Document (TRD)
 
-Status: **Locked for R1.** The stack, versions, folder layout and security constraints are binding. Any deviation requires a Decision Log entry in `06_Plan.md` **before** the change.
+Status: **Locked for R1, amended by R1.1 (2026-11-09; Decision Log in `07_Plan_V2.md`).** The stack, versions, folder layout and security constraints are binding. Any deviation requires a Decision Log entry in `06_Plan.md` **before** the change.
 
 ---
 
@@ -21,7 +21,7 @@ Status: **Locked for R1.** The stack, versions, folder layout and security const
  Supabase Postgres 17 (ap-southeast-1 Singapore) — RLS ON everywhere, default deny
    ├─ SQL functions (security definer, service_role-only EXECUTE) for every multi-row transaction
    ├─ pg_cron: finalize overdue attempts (1 min), outbox kick via pg_net (2 min), cleanup (daily)
-   └─ Storage: question-media (private, signed URLs) · public-assets (public)
+   └─ Storage: question-media (private, signed URLs) · public-assets (public) · plan-routines (public PDFs, R1.1) · import-uploads (private, staged imports, R1.1)
  External: Resend (email) · Google Sheets API v4 (service account, write-only mirror)
 ```
 
@@ -38,6 +38,7 @@ Status: **Locked for R1.** The stack, versions, folder layout and security const
 | ADR-07 | No ORM. SQL migrations via Supabase CLI; generated TypeScript types; `supabase-js` query builder + RPC. | RLS, functions and triggers are first-class in SQL; one migration system. |
 | ADR-08 | Cookie-based locale (no URL prefix) with `next-intl`; `bn` default. | Simplest routing; the public SEO surface is small. |
 | ADR-09 | `export const revalidate = 60` + `revalidatePath()` after admin mutations are kept, but because the root layout reads the locale cookie every page renders dynamically in R1. `cacheComponents` / `"use cache"` are **not** enabled. | Predictable behaviour; revisit if P4.20 shows TTFB problems. |
+| ADR-10 | **Free tiers only (R1.1):** Vercel Hobby, Supabase Free, Resend Free, Google Cloud free. Uploads bypass the app server (signed Storage URLs); heavy import parsing runs in the admin's browser. Details §13. | Owner constraint; Vercel's 4.5 MB request cap and short Hobby functions, Next's 1 MB Server Action default. |
 
 ---
 
@@ -69,8 +70,8 @@ Install with **exact** versions (`pnpm add -E`). Security upgrade 2026-11-07 (P4
 | `@react-email/components` | **0.5.7** | Email templates (`emails/*.tsx`) |
 | `google-auth-library` | **10.4.0** | Service-account JWT for the Sheets REST API (no `googleapis` mega-package) |
 | `katex` | **0.16.25** | Math rendering |
-| `exceljs` | **4.4.0** | `.xlsx` import parsing + template generation |
-| `papaparse` | **5.5.3** | `.csv` import parsing |
+| `exceljs` | **4.4.0** | `.xlsx` template generation (server) and import parsing incl. pictures (in the admin's browser, dynamically imported, R1.1) |
+| `papaparse` | **5.5.3** | `.csv` import parsing (in the admin's browser, R1.1) |
 | `radix-ui` | **1.4.3** | Headless Dialog, DropdownMenu, Tabs, Checkbox, Popover, Tooltip, RadioGroup |
 | `lucide-react` | **0.548.0** | Icons |
 | `sonner` | **2.0.7** | Toasts |
@@ -125,7 +126,10 @@ ByteSizeICT/
 │   ├── credentials.tsx  renewal-approved.tsx  admission-rejected.tsx  admin-new-admission.tsx
 ├── scripts/
 │   ├── create-admin.ts           # pnpm admin:create --email --name (prompts for password)
-│   └── gen-types.sh              # supabase gen types typescript --local > src/types/database.ts
+│   ├── gen-types.sh              # supabase gen types typescript --local > src/types/database.ts
+│   ├── backup-db.sh              # R1.1: supabase db dump (roles, schema, data) of any DB URL → backups/<stamp>/
+│   ├── backup-storage.ts         # R1.1: downloads every Storage bucket (service role) → backups/<stamp>/storage/
+│   └── restore-check.sh          # R1.1: restores a backup into an isolated local stack and compares row counts
 ├── messages/
 │   ├── bn.json                   # default
 │   └── en.json
@@ -138,7 +142,7 @@ ByteSizeICT/
 │   │   ├── (public)/
 │   │   │   ├── layout.tsx        # public header/footer, sticky enroll bar, WhatsApp FAB
 │   │   │   ├── page.tsx          # homepage
-│   │   │   ├── routine/page.tsx
+│   │   │   ├── routine/page.tsx  # R1.1: plan routine PDFs + the logged-in student's personal routine
 │   │   │   ├── enroll/page.tsx   enroll/success/page.tsx
 │   │   │   ├── sample/result/page.tsx
 │   │   │   ├── faq/page.tsx      privacy/page.tsx
@@ -338,10 +342,10 @@ type AttemptSession = {
 | auth | `studentLogin({mobile,pin,remember})`, `studentLogout()`, `changePinForced({newPin,confirm})`, `changePin({currentPin,newPin,confirm})`, `adminLogin({email,password})`, `adminLogout()` |
 | admissions | `submitAdmission({mobile,email,method,trxId,planId?})` (public) · `approveAdmission({admissionId,planId?,amountBdt,startsAt,expiresAt,note?})` · `rejectAdmission({admissionId,reason,sendEmail})` |
 | students | `extendStudents({studentIds[],days})` · `setStudentExpiry({studentId,expiresAt})` · `cancelStudent({studentId,reason})` · `suspendStudent({studentId,reason})` · `reactivateStudent({studentId})` · `resetStudentPin({studentId,mode:'auto'|'manual',pin?,sendEmail})` · `resendCredentials({studentId})` · `forceLogoutStudent({studentId})` · `updateStudent({studentId,email?,adminLabel?,adminNote?})` |
-| taxonomy | `upsertSubject`, `upsertChapter`, `upsertTopic`, `upsertTag`, `deleteTopic` (only if unused), `deleteTag` |
-| questions | `createQuestion(input, {force?})` · `updateQuestion(id,input,{force?})` · `duplicateQuestion(id)` · `setQuestionStatus(ids[],status)` · `bulkTag(ids[],tagIds[],op:'add'|'remove')` · `createMediaUploadUrl({kind,ext})` (signed upload to `question-media`) · `previewImport(formData)` · `commitImport({importToken,defaultStatus})` |
-| exams | `createExam(input)` · `updateExamSettings(id,input)` · `setExamQuestions(id,questionIds[])` (ordered) · `setExamAudience(id,{audience,studentIds[]})` · `publishExam(id)` · `unpublishExam(id)` · `archiveExam(id)` · `setFeaturedExam(id\|null)` |
-| settings | `updateSetting(key,value)` · `upsertPlan` · `deletePlan` (soft: `is_active=false`) · `upsertPaymentAccount` · `retryFailedOutbox()` |
+| taxonomy | `upsertSubject`, `upsertChapter`, `upsertTopic`, `deleteTopic` (only if unused) *(R1.1: tags removed)* |
+| questions | `createQuestion(input, {force?})` · `updateQuestion(id,input,{force?})` · `duplicateQuestion(id)` · `setQuestionStatus(ids[],status)` · `deleteQuestions(ids[])` (R1.1: `QUESTION_IN_USE` / soft / hard, §8.11) · `createMediaUploadUrl({kind,ext})` (signed upload to `question-media`) · `createImportUploadUrls({batchId,files[]})` (R1.1: signed uploads for the rows JSON → `import-uploads`, images → `question-media/staging/<batch>/`, ≤ 50 per call) · `previewImport({batchId,rowsPath})` · `commitImport({importToken,defaultStatus})` · `cancelImport({batchId})` *(R1.1: `bulkTag` removed; `previewImport` no longer takes a file)* |
+| exams | `createExam(input)` · `updateExamSettings(id,input)` · `setExamQuestions(id,questionIds[])` (ordered) · `setExamAudience(id,{audience:'all_active'\|'plans',planIds[]})` (R1.1) · `publishExam(id)` · `unpublishExam(id)` · `archiveExam(id)` *(R1.1: `setFeaturedExam` removed)* |
+| settings | `updateSetting(key,value)` · `upsertPlan` (R1.1: `routinePdfPath` required on create → `ROUTINE_PDF_REQUIRED`) · `createRoutineUploadUrl()` (R1.1: signed upload to `plan-routines`, PDF ≤ 5 MB) · `deletePlan` (soft: `is_active=false`) · `upsertPaymentAccount` · `retryFailedOutbox()` |
 
 ### 7.3 Key query payloads
 - `getAttemptResult(attemptId, studentId)` → `ResultPayload { exam{title,subject,chapter,totalMarks,…}, attempt{score,correct,incorrect,skipped,accuracy,isLate,submittedAt}, rank: {visible:true, position, participants, highest} | {visible:false, publishAt}, answersVisible: boolean, answersPublishAt, statsVisible, questions: ReviewQuestion[] }`. `ReviewQuestion` includes `correctOption`, `explanation`, `stats` **only when** the respective gates are true; otherwise those fields are `null` (they are not computed at all).
@@ -361,6 +365,9 @@ type AttemptSession = {
 8. **Local store:** key `bsi:attempt:<attemptId>`, JSON `{v:1, seq, answers, scrollQ, updatedAt}`; written synchronously on every change; removed after a successful submit; stale keys (> 7 days) are purged on app load.
 9. **Sync queue:** single in-flight request; coalesces by question (latest seq wins); 600 ms debounce; exponential backoff 1→30 s; `online` event triggers an immediate flush; `visibilitychange: hidden` → flush with `keepalive: true` (body ≤ 60 KB).
 10. **Performance:** render cards in chunks: first 15 immediately, the rest via `requestIdleCallback` batches of 20 (fallback `setTimeout`); cards use `content-visibility: auto; contain-intrinsic-size: 0 320px`. Images `loading="lazy"`. KaTeX CSS loaded only on question routes; math is pre-rendered **server-side** to HTML strings in `paper.ts` (`katex.renderToString`) so the client bundle does not include KaTeX JS on the exam page. The same applies to the review page.
+
+11. **Question deletion (R1.1):** `rpc('delete_questions', {p_admin, p_ids})` raises `QUESTION_IN_USE` (detail = blocking exam ids/titles) if any question is in an exam whose `exam_phase` is `draft`, `scheduled`, `live` or `late_window`; otherwise it sets `deleted_at`/`deleted_by` for questions referenced by any exam or attempt answer (soft) and deletes unreferenced ones (hard), writing one audit row each, and returns the hard-deleted image paths, which the service removes from Storage. All bank/builder/search/duplicate queries filter `deleted_at is null`; paper, review and results queries do not (past exams keep rendering).
+12. **Bulk import with images (R1.1):** the import page dynamically imports `exceljs`/`papaparse` (admin route only; never on the exam route) and parses the file in the browser: rows → JSON; Excel pictures via `worksheet.getImages()` mapped from their anchor cell to (row, image column); one picture per cell; magic-byte type check (PNG/JPEG/WebP) and ≤ 1 MB; "Place in Cell" pictures reported as `IMPORT_IMAGE_UNSUPPORTED`. It then requests signed upload URLs (`createImportUploadUrls`, batched ≤ 50) and uploads rows JSON + images straight to Storage, and calls `previewImport({batchId, rowsPath})`. The server re-validates every row with Zod, checks each referenced staged image exists (Storage list metadata: size/type), detects duplicates (excluding soft-deleted), and stores the batch (`question_import_batches`, 30 min TTL). `commitImport` moves staged images (`storage.move`) and inserts rows in batches of ≤ 200. Every request stays small and fast for Vercel Hobby.
 
 ---
 
@@ -383,6 +390,10 @@ type AttemptSession = {
 ### 9.3 Supabase Storage
 - `question-media`: **private**; path `questions/<uuid>.<ext>`; admins upload via signed upload URLs (≤ 1 MB, `image/png|jpeg|webp`); students receive signed read URLs only inside an active paper or a review payload.
 - `public-assets`: **public**; logo, testimonial photos; ≤ 512 KB.
+- `plan-routines` (R1.1): **public**; path `plans/<uuid>.pdf`; `application/pdf` only, ≤ 5 MB; admins upload via signed upload URLs; shown on plan cards, `/enroll` and `/routine`.
+- `import-uploads` (R1.1): **private**; `<batchId>/rows.json` written by the admin's browser via a signed upload URL; deleted on commit/cancel and by the 24 h cleanup.
+- `question-media/staging/<batchId>/` (R1.1): import images uploaded by the browser; moved to `questions/<uuid>.<ext>` on commit; deleted on cancel and by the 24 h cleanup (pg_cron → `kick` → internal route with `x-cron-secret`, deleting through the Storage API, never via SQL on `storage.objects`).
+- Bucket limits (size, MIME) are set on the buckets themselves so Supabase enforces them on direct uploads.
 
 ### 9.4 Vercel
 - Project region `sin1` (`vercel.json`). Security headers are defined **only** in `next.config.ts` `headers()`.
@@ -421,4 +432,18 @@ type AttemptSession = {
 | i18n | 100% of UI strings in `messages/{bn,en}.json`; a CI script fails on missing keys in either file. |
 
 ## 12. Scripts (`package.json`)
-`dev`, `build`, `start`, `lint`, `typecheck` (`tsc --noEmit`), `format`, `test` (vitest), `test:e2e` (playwright), `db:start` (`supabase start`), `db:reset` (`supabase db reset`), `db:test` (`supabase test db`), `db:types` (`scripts/gen-types.sh`), `admin:create`, `email:dev`, `check:secrets` (grep `.next/static`), `check:i18n`, `check:answer-leak` (grep rule §4.6), `ci` (= lint + typecheck + test + db:test + check:i18n + check:answer-leak + test:e2e + check:secrets; run it as **`pnpm run ci`** because `pnpm ci` is a reserved pnpm command). Scripts that import app modules run with `tsx --conditions=react-server` (for `server-only`).
+`dev`, `build`, `start`, `lint`, `typecheck` (`tsc --noEmit`), `format`, `test` (vitest), `test:e2e` (playwright), `db:start` (`supabase start`), `db:reset` (`supabase db reset`), `db:test` (`supabase test db`), `db:types` (`scripts/gen-types.sh`), `admin:create`, `backup:db` (R1.1: `scripts/backup-db.sh`), `restore:check` (R1.1: `scripts/restore-check.sh <dir>`), `email:dev`, `check:secrets` (grep `.next/static`), `check:i18n`, `check:answer-leak` (grep rule §4.6), `ci` (= lint + typecheck + test + db:test + check:i18n + check:answer-leak + test:e2e + check:secrets; run it as **`pnpm run ci`** because `pnpm ci` is a reserved pnpm command). Scripts that import app modules run with `tsx --conditions=react-server` (for `server-only`).
+
+## 13. Free-tier constraints (R1.1, ADR-10)
+Every feature must run on the free tiers. Rules:
+
+| Limit | Rule |
+| --- | --- |
+| Vercel: request body ≤ 4.5 MB; Next Server Actions 1 MB by default | No file ever passes through the app server: signed upload URLs → Supabase Storage (import files, images, PDFs). Server Actions receive paths/JSON only. |
+| Vercel Hobby: short function duration | Heavy work runs in the browser (import parsing, image extraction); server calls are batched (≤ 50 signed URLs, ≤ 200 inserted rows per call). No long-running jobs. |
+| Vercel Hobby: no paid add-ons | No Vercel Cron, Blob, KV, Edge Config; scheduling stays in pg_cron, files in Supabase Storage. Hobby is for non-commercial use; a paid coaching business should move to Pro when it starts charging (owner decision). |
+| Supabase Free: 500 MB DB, 1 GB Storage, 50 MB per file, ~5 GB egress/month, no PITR, no image transformations, project pauses after ~1 week idle | Images ≤ 1 MB, routine PDFs ≤ 5 MB, import files ≤ 20 MB and deleted within 24 h; no Storage image transformations; `pg_dump` before every migration (`scripts/backup-db.sh`, RUNBOOK §8). |
+| Resend Free: ~100 emails/day, 3,000/month, 1 domain | No new email types in R1.1. |
+| Google Cloud: Sheets API free quota | Unchanged: sequential, ≤ 1 request/s. |
+| Vercel Analytics on Hobby | Page views only; custom `track()` events may not be recorded; nothing depends on them. |
+

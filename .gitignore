@@ -43,3 +43,6 @@ supabase/.branches/
 npm-debug.log*
 pnpm-debug.log*
 .vercel
+
+# database/storage backups contain production data (RUNBOOK §8)
+/backups/

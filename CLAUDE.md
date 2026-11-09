@@ -4,31 +4,32 @@ ByteSizeICT is a mobile-first, Bangla-first ICT MCQ exam platform: public market
 
 ## 0. Mandatory pre-flight (EVERY task, no exceptions)
 
-Before you write, edit or delete any file, or run any mutating command, **read all six context documents in full**, in this order:
+Before you write, edit or delete any file, or run any mutating command, **read all seven context documents in full**, in this order:
 
 1. `docs/01_PRD.md`: scope, user stories, **Non-Goals** (never build these)
 2. `docs/02_AppFlow.md`: routes, guards, state machines, screen behaviour, error codes
 3. `docs/03_UI_Spec.md`: design tokens and component states (no hard-coded values)
 4. `docs/04_TRD.md`: locked stack and versions, folder structure, API contracts, security constraints
 5. `docs/05_Schema.md`: DDL, RLS, SQL functions, auth flow
-6. `docs/06_Plan.md`: the checklist; find the **Current Step**
+6. `docs/06_Plan.md`: the V1 (R1) checklist and its Decision Log: history, read for context
+7. `docs/07_Plan_V2.md`: **the active checklist (R1.1 / V2)**; find the **Current Step**, the owner decisions (§2) and the free-tier constraints (§3)
 
-Then state in one line which plan step you are executing (e.g. "Executing P2.07 — Enrollment"). If the user's request does not map to a plan step, say so and ask whether to add a step (via the Decision Log) before proceeding.
+Then state in one line which plan step you are executing (e.g. "Executing V2.10 — Question deletion migration"). If the user's request does not map to a plan step, say so and ask whether to add a step (via the Decision Log) before proceeding.
 
-The original concept file `docs/ICT MCQ Exam Platform Complete Concept and Specification.md` is background only. Where it differs from docs 01–06, **docs 01–06 win**.
+The original concept file `docs/ICT MCQ Exam Platform Complete Concept and Specification.md` is background only. Where it differs from docs 01–07, **docs 01–07 win**.
 
 ## 1. Plan discipline
 
 - Execute steps **in order**. Do not start a step whose dependencies are not `[x]`.
 - One step at a time. Keep diffs scoped to the current step. No drive-by refactors.
-- **After completing every step, update `docs/06_Plan.md` immediately**, in the same turn and before you report back:
+- **After completing every step, update the active plan (`docs/07_Plan_V2.md`) immediately**, in the same turn and before you report back:
   1. Tick the step `[x]` (or `[!]` blocked with a reason / `[~]` in progress if you must stop mid-step).
   2. Fill `Done:` with `YYYY-MM-DD — <one-line summary; key files; verification result>`.
   3. Advance **Current Step** to the next unchecked step.
   4. Update the **Progress** table counts.
   5. Add a **Decision Log** row for any deviation from docs 01–05.
 - Never tick a step unless its **Verify** check actually passed. Paste or summarise the evidence (command + result) in `Done:`.
-- At each phase gate (P1.30, P2.26, P3.30, P4.24), run `pnpm run ci` and stop for user review.
+- At each phase gate (V1: P1.30, P2.26, P3.30, P4.24; V2: V2.09, V2.13, V2.18, V2.23, V2.29, V2.36), run `pnpm run ci` and stop for user review.
 
 ## 2. Conflict & ambiguity protocol
 
@@ -39,7 +40,8 @@ The original concept file `docs/ICT MCQ Exam Platform Complete Concept and Speci
 ## 3. Hard rules (violations are bugs)
 
 **Scope**
-- Do not build anything in PRD §6 Non-Goals (leaderboard page, reminders, announcements, doubts, PDF downloads, auto-generated exams, groups, payment gateway, PWA, retakes, a name field, SMS, social login…). Do not create R2-reserved tables.
+- Do not build anything in PRD §6 Non-Goals (leaderboard page, reminders, announcements, doubts, PDF downloads of results/papers, auto-generated exams, groups other than plans, payment gateway, PWA, retakes, a name field, SMS, social login…). Do not create R2-reserved tables.
+- **Free tiers only (R1.1, TRD §13):** nothing may require a paid plan of Vercel (Hobby), Supabase, Resend or Google Cloud. No file uploads through the app server (signed Storage URLs), no long-running server work, no Vercel Cron/Blob/KV, no Supabase image transformations, no new email volume without checking the Resend free limit.
 
 **Stack**
 - Use only the packages and **exact versions** in TRD §2 (`pnpm add -E`). No `^`/`~`. Never add a dependency without a Decision Log entry. TRD §2.4 lists forbidden libraries (no ORM, no Supabase Auth/`@supabase/ssr`, no NextAuth, no state libraries, no TanStack Query, no `middleware.ts`; use `src/proxy.ts`).
@@ -66,7 +68,7 @@ The original concept file `docs/ICT MCQ Exam Platform Complete Concept and Speci
 - Server Actions and Route Handlers return the envelope `{ ok: true, data } | { ok: false, error: { code, message, field?, meta? } }` using the canonical `ErrorCode`s (AppFlow §7.1).
 - Use exact route paths, state names, enum values and error codes from the docs. Do not invent synonyms.
 - Styling: Tailwind utilities backed by tokens from `03_UI_Spec.md`. No hex literals, no arbitrary values (`p-[13px]`), no inline styles except dynamic widths (e.g., progress bars).
-- All user-visible strings go through `next-intl` (`messages/bn.json` + `messages/en.json`, both updated together). Bangla is the default. Use Latin digits; display times in `Asia/Dhaka`.
+- All user-visible strings go through the message catalogs (`messages/bn.json` + `messages/en.json`, both updated together): `next-intl/server` on the server, `src/lib/i18n/client.tsx` in client components (only `{name}` placeholders and `plural`; `check:i18n` enforces it). Bangla is the default. Use Latin digits; display times in `Asia/Dhaka`.
 - Mobile-first (design at 360 px); touch targets ≥ 48 px; one primary action per screen; dark mode via tokens only.
 - TypeScript strict; no `any` (use `unknown` + narrowing); no non-null assertions on external data.
 - Match the surrounding code's style, naming and comment density. Comments explain *why*, not *what*.
@@ -95,4 +97,4 @@ pnpm admin:create --email you@example.com --name "Admin"
 
 When you finish a turn, report: the step ID(s) worked on, what changed (files), the verification evidence, the updated Current Step, and any Decision Log entries or open questions. Report failures honestly, with the failing output.
 
-Commits (only when the user asks): one commit per completed plan step, message `P<id>: <summary>`.
+Commits (only when the user asks): one commit per completed plan step, message `P<id>: <summary>` (V1) or `V2.<nn>: <summary>` (V2), unless the user specifies another message.

@@ -1,6 +1,6 @@
 # 02 — Application Flow & State Machines
 
-Status: **Locked for R1.** Route paths, state names and error codes here are canonical. Code must use these exact identifiers.
+Status: **Locked for R1, amended by R1.1 (2026-11-09, `07_Plan_V2.md`).** Route paths, state names and error codes here are canonical. Code must use these exact identifiers.
 Cross-refs: user story IDs (`V-xx`, `S-xx`, `A-xx`) → `01_PRD.md`; tables and functions → `05_Schema.md`; components → `03_UI_Spec.md`; API contracts → `04_TRD.md` §7.
 
 ---
@@ -13,10 +13,10 @@ Locale is **cookie-based** (`NEXT_LOCALE` = `bn` | `en`, default `bn`). URLs car
 | Route | Screen | Story |
 | --- | --- | --- |
 | `/` | Homepage | V-01…V-04, V-08 |
-| `/routine` | Exam routine (date-grouped list) | V-03 |
-| `/enroll` | Enrollment / payment form (`?plan=<code>`, `?kind=renewal` from `/renew`) | V-06, V-07 |
+| `/routine` | Plan routines: every active plan's routine PDF (View / Download); a logged-in student also sees their personal routine (§4.2) | V-03, S-16 |
+| `/enroll` | Enrollment / payment form for **one** plan: `?plan=<code>` required (missing/unknown/inactive → redirect `/#pricing`); `&kind=renewal` from `/renew` | V-06, V-07 |
 | `/enroll/success` | Enrollment received | V-07 |
-| `/sample` | Free sample exam (same exam UI, `mode="sample"`) | V-05 |
+| `/sample` | Trial exam (the free sample exam; same exam UI, `mode="sample"`) | V-05 |
 | `/sample/result` | Sample result (client-held result from `POST /api/sample/score`) | V-05 |
 | `/faq` | FAQ + contact | V-04 |
 | `/privacy` | Privacy policy | — |
@@ -28,7 +28,7 @@ Locale is **cookie-based** (`NEXT_LOCALE` = `bn` | `en`, default `bn`). URLs car
 | `/change-pin` | Forced first-login PIN change | only reachable when `must_change_pin` (otherwise → `/dashboard`) | S-02 |
 | `/dashboard` | Dashboard | — | S-04 |
 | `/exams` | My exams list | — | S-05 |
-| `/exams/[examId]` | Exam lobby (instructions + Start) | assigned to student | S-05 |
+| `/exams/[examId]` | Exam lobby (instructions + Start) | in the exam's audience (all active students, or the student's current plan) | S-05 |
 | `/attempts/[attemptId]` | Exam page (single scrolling) | owner + `in_progress` (else → result) | S-06…S-09 |
 | `/attempts/[attemptId]/result` | Result & review | owner + attempt submitted | S-10, S-11 |
 | `/results` | All my results | — | S-12 |
@@ -49,7 +49,7 @@ Locale is **cookie-based** (`NEXT_LOCALE` = `bn` | `en`, default `bn`). URLs car
 | `/admin/questions/new` | New question | A-07 |
 | `/admin/questions/[questionId]` | Edit question | A-07 |
 | `/admin/questions/import` | Bulk import | A-08 |
-| `/admin/taxonomy` | Subjects / chapters / topics / tags | A-06 |
+| `/admin/taxonomy` | Subjects / chapters / topics (R1.1: tags removed) | A-06 |
 | `/admin/exams` | Exams list (`?phase=`) | A-10, A-13 |
 | `/admin/exams/new` | Create exam (settings step) | A-10 |
 | `/admin/exams/[examId]` | Exam builder (tabs: Settings · Questions · Audience · Publish) | A-10, A-11 |
@@ -74,7 +74,7 @@ Locale is **cookie-based** (`NEXT_LOCALE` = `bn` | `en`, default `bn`). URLs car
 
 | Context | Header | Bottom nav (mobile < 768 px) | Floating |
 | --- | --- | --- | --- |
-| Public | Logo (left) → `/`; right: Routine, FAQ, **Login** (text button), language toggle, theme toggle. Mobile: logo + Login + hamburger (sheet with links/toggles). | none | **Sticky Enroll bar** (mobile, hidden on `/enroll`, `/enroll/success`, `/sample*`, `/login`); WhatsApp/Messenger FAB (bottom-right, above the sticky bar) |
+| Public | Logo (left) → `/`; right: Routine, Trial exam, FAQ, **Login** (text button), **Enroll Now** (→ `/#pricing`, desktop), language toggle, theme toggle. Mobile: logo + Login + hamburger (sheet with links/toggles). | none | **Sticky Enroll bar** (mobile, → `/#pricing`; hidden on `/enroll`, `/enroll/success`, `/sample*`, `/login`); WhatsApp/Messenger FAB (bottom-right, above the sticky bar) |
 | Student | Logo (left) → `/dashboard`; right: Home icon → `/dashboard`, Notification icon (R1: disabled with tooltip "Coming soon"; hidden on mobile), Profile icon → `/profile` | Dashboard · Exams · Results · Profile (active tab highlighted) | none |
 | Exam page | **Replaced** by the sticky exam bar (title, timer, answered counter) | **Replaced** by the sticky Submit bar | Navigator FAB, scroll-to-top FAB |
 | Admin | Desktop: left sidebar (Overview, Admissions [pending badge], Students, Question Bank, Taxonomy, Exams, Settings, Audit) + top bar (brand, admin email, Logout). Mobile: top bar + hamburger drawer with the same items. | none | none |
@@ -185,29 +185,32 @@ Orthogonal **sync sub-state**: `synced | pending(n) | offline(n) | error`. The t
 ## 4. Public Screens
 
 ### 4.1 Homepage `/`
-Data (server-rendered, `revalidate` via tags `routine`, `settings`, `plans`): next exam, upcoming exams (next 14 days, max 10), plans, payment-free settings (brand, contact, testimonials, top performers, FAQ).
+Data (server-rendered): plans (incl. routine PDF URLs), payment-free settings (brand, contact, testimonials, top performers, FAQ), whether a trial (sample) exam is published. **No exam data** (R1.1).
 
 | Section (order) | Content | Actions |
 | --- | --- | --- |
-| 1 Hero | Headline (`home.hero.title`), value line, illustration (inline SVG, ≤ 8 KB) | **Enroll Now** → `/enroll`; **Try a Free Sample Exam** → `/sample` (hidden if no published sample exam) |
-| 2 Live routine strip | "Next exam: <chapter/title>, <relative day> <time>" + countdown `DD:HH:MM:SS` | Tap → `/routine`. When the countdown hits 0 the strip shows "Live now"; if the exam is live it shows "Live now — Login to take it" → `/login`. |
-| 3 Routine | Up to 10 upcoming exams grouped by date: title, chapter, time, duration, marks | **See full routine** → `/routine` |
-| 4 Why join | 6 icon cards (static i18n copy) | — |
-| 5 Results & social proof | Top performers, testimonials (from settings) | — |
-| 6 How it works | 3 steps: Pay → Get login by email → Start exams | — |
-| 7 Pricing | Active plans, sorted; highlighted plan has a "Popular" badge | **Choose** → `/enroll?plan=<code>` |
-| 8 Free sample | Card with a short pitch | **Start sample** → `/sample` |
-| 9 FAQ | Accordion (first 6) | **More questions** → `/faq` |
-| 10 Footer | Contact, privacy, © | — |
+| 1 Hero | Headline (`home.hero.title`), value line, illustration (inline SVG, ≤ 8 KB) | **Enroll Now** → `/#pricing` (smooth scroll, instant under reduced motion); **Trial exam** (bn "ট্রায়াল পরীক্ষা দিন") → `/sample` (hidden if no published sample exam) |
+| 2 Why join | 6 icon cards (static i18n copy) | — |
+| 3 Results & social proof | Top performers, testimonials (from settings) | — |
+| 4 How it works | 3 steps: Pay → Get login by email → Start exams | — |
+| 5 Plans & Pricing (`id="pricing"`) | Active plans, sorted; highlighted plan has a "Popular" badge. Each card: name, price, duration/expiry, features, **View routine** (secondary; opens the PDF in a new tab, plus a download link) — shown only when the plan has a routine PDF — and below it **Choose this plan** (primary, same colour as Enroll Now) | **Choose this plan** → `/enroll?plan=<code>` |
+| 6 Trial exam | Card with a short pitch | **Start trial exam** → `/sample` |
+| 7 FAQ | Accordion (first 6) | **More questions** → `/faq` |
+| 8 Footer | Contact, routine, privacy, © | — |
 
-Empty states: no upcoming exams → section 3 shows "New exams will be announced soon. Follow us on WhatsApp for updates." with the WhatsApp link; strip hidden. No testimonials → section 5 hidden. No active plans → section 7 hidden, Enroll buttons still visible.
+Removed in R1.1: the live next-exam strip and the homepage routine section (exams are shown only to students: §5.2, §4.2).
+Empty states: no testimonials → section 3 hidden. No active plans → section 5 shows "Plans will be announced soon" + WhatsApp link; Enroll Now still scrolls there.
 
-### 4.2 Routine `/routine`
-All published non-sample exams with `starts_at ≥ today 00:00 Asia/Dhaka`, grouped by date; past 7 days in a collapsible "Recent" group. Each row: time, title, chapter, duration, total marks, negative-mark note. Empty: same copy as the homepage.
+### 4.2 Routine `/routine` (R1.1)
+Public, server-rendered.
+- **Plan routines (everyone):** each active plan (sorted like the pricing section) with name, price, and its routine PDF: **View** (new tab) and **Download**. A plan without a PDF shows "Routine coming soon". Each plan links to `/enroll?plan=<code>`.
+- **Your routine (logged-in students only, shown first):** upcoming exams whose audience includes the student (`student_exam_cards`), `starts_at ≥ today 00:00 Asia/Dhaka`, grouped by date; each row: time, title, chapter, duration, total marks, negative-mark note, status per §3.5 → `/exams/:id`. Empty: "No upcoming exams for your plan yet."
+- Visitors never see exam data; anonymous database reads of `exams` are not granted.
 
 ### 4.3 Enroll `/enroll`
 Layout (mobile, single column):
-1. **Step 1 — Pay**: plan selector (radio cards; preselected from `?plan`, else the highlighted plan; the amount updates). Payment account cards (method logo, number, account type label, instructions). Each number has a **Copy** button (copied → toast "Number copied", button shows ✓ for 2 s).
+Entry: only from a plan card (`/#pricing`, `/routine`) or `/renew` (R1.1). The server resolves `?plan=<code>`; missing, unknown or inactive → `redirect('/#pricing')`.
+1. **Step 1 — Pay**: the **chosen plan's card only** (name, price, duration/expiry, features, routine link if any; no plan selector) and the amount. Payment account cards (method logo, number, account type label, instructions). Each number has a **Copy** button (copied → toast "Number copied", button shows ✓ for 2 s).
 2. **Step 2 — Submit details** (form):
 
 | Field | Type | Validation (client + server, shared Zod in `src/features/admissions/schemas.ts`) | Error message key |
@@ -216,7 +219,7 @@ Layout (mobile, single column):
 | Email | `email` | RFC-lite, max 254, lower-cased | `errors.emailInvalid` |
 | Payment Method | segmented control: bKash / Nagad / Rocket / Bank | required, one of the active accounts' methods | `errors.methodRequired` |
 | Transaction ID | text, `autocapitalize=characters` | trim, remove spaces, 6–30 chars `[A-Za-z0-9-]` | `errors.trxInvalid` |
-| Plan | hidden/radio (from Step 1) | optional active plan id | — |
+| Plan | hidden (from `?plan`) | required active plan id | — |
 
 Hidden fields: `kind` hint (`renewal` from `/renew`, informative only; the server decides).
 Submit button: **Submit request** (loading state "Submitting…", disabled while pending).
@@ -236,10 +239,11 @@ Duplicate mobile/email of an **existing student** is **not** an error for the vi
 ### 4.4 Enroll success `/enroll/success`
 Check-mark illustration, confirmation copy, "What happens next" (3 bullets: we verify within ~12 h, you get an email with your PIN, log in with your mobile number). Buttons: **Try a sample exam**, **Back to home**. If reached directly without a submission it still renders (stateless).
 
-### 4.5 Sample exam `/sample` → `/sample/result`
-- `GET` the sample paper server-side (no answers). If none is published → empty state "The sample exam isn't available right now." + Enroll CTA.
-- The exam UI is identical to §5.4 but: no server autosave (local only, key `bsi:sample`), the timer is client-only (duration from exam), there is no lobby, and the header shows a "Free sample" badge.
-- Submit → `POST /api/sample/score` `{answers}` → response stored in `sessionStorage` → `/sample/result`, which renders the review UI (§5.5) with a sticky **Enroll Now** CTA. Rank, highest marks and option stats are hidden. Direct visit without stored data → redirect to `/sample`.
+### 4.5 Trial exam (sample exam) `/sample` → `/sample/result`
+All UI labels say **Trial exam** (bn "ট্রায়াল পরীক্ষা"); the URL and the data model (`exams.is_sample`) keep the name *sample*.
+- `GET` the sample paper server-side (no answers). If none is published → empty state "The trial exam isn't available right now." + Enroll Now (→ `/#pricing`).
+- The exam UI is identical to §5.4 but: no server autosave (local only, key `bsi:sample`), the timer is client-only (duration from exam), there is no lobby, and the header shows a "Trial exam" badge.
+- Submit → `POST /api/sample/score` `{answers}` → response stored in `sessionStorage` → `/sample/result`, which renders the review UI (§5.5) with a sticky **Enroll Now** CTA (→ `/#pricing`). Rank, highest marks and option stats are hidden. Direct visit without stored data → redirect to `/sample`.
 
 ### 4.6 FAQ `/faq`
 Accordion of all FAQ items from settings + a contact card (WhatsApp, Messenger, phone, email). Empty FAQ → contact card only.
@@ -267,12 +271,14 @@ Query `?reason=` banners: `new_login` → "You were logged out because your acco
 Explanation line: "For your security, set your own PIN." Fields: New PIN (4–6 digits), Confirm PIN. Validation: digits only, 4–6, match, ≠ current PIN (server checks against the hash), not in the trivial list (`0000`, `1234`, `123456`, `111111`, …; see `src/lib/auth/pin.ts`). Success → toast "PIN updated" → `/dashboard`. Other sessions are revoked (`pin_changed`); the current session is kept.
 
 ### 5.2 Dashboard `/dashboard`
+Every exam block lists only exams whose audience includes the student: audience `all_active`, or `plans` containing the student's current `plan_id` (R1.1).
 | Block | Content | Empty state |
 | --- | --- | --- |
 | Greeting | "Welcome back" + masked mobile `017XX-XXX-890` | — |
 | Subscription chip | `active`: "Active · {n} days left" (green; amber when ≤ 7 days). `expired`/`cancelled`: red chip + **Renew** button → `/renew` | — |
 | Primary card | The first exam by status priority: Live Now (in-progress resume first) → Missed·Take Now → next Upcoming. Big button per §3.5. | "No exam right now. Next: {title}, {date time}" or "No upcoming exams yet." |
-| Upcoming | Next 5 upcoming (title, date/time, duration) | "Nothing scheduled yet." |
+| Next exam | The nearest upcoming exam in the student's audience with a countdown (server offset) → lobby | hidden when none |
+| Routine | Upcoming exams (next 14 days, max 10) grouped by date (title, time, duration); link **Full routine** → `/routine` | "Nothing scheduled yet." |
 | Missed | Missed exams of the last 14 days; "Take Now" when in `late_window` | hidden when empty |
 | Quick stats | Exams taken, average %, best %, current streak (consecutive closed live windows attempted on time, counting back from the latest one; exams that started before the student's access began are ignored) | All zeros with hint "Take your first exam to see stats." |
 | Recent results | Last 5 attempts: title, score/total, date → result | "Your results will appear here." |
@@ -397,24 +403,32 @@ Profile: header (mobile, email, state chip, label) + action menu:
 Tabs: **Overview** (plan, dates, credentials status, last login), **Payments** (admissions for this student), **Exams** (attempt history: exam, score, rank-at-view, late, date → admin view of the result), **Audit** (events for this student).
 
 ### 6.5 Question bank `/admin/questions`
-Filter bar: subject → chapter → topic (cascading), difficulty, type, tag (multi), status (default Active+Draft), "Unused only", search (trigram on the stem). Sort: Newest / Most used / Lowest % correct. List rows: stem preview (2 lines, KaTeX rendered), chapter/topic, difficulty chip, used ×, % correct, status. Row actions: Edit, Duplicate, Archive/Unarchive. Multi-select bulk: Add tag, Remove tag, Set status. Buttons: **New question**, **Import**.
+Filter bar: subject → chapter → topic (cascading), status (default Active+Draft), "Unused only", search (trigram on the stem). Sort: Newest / Most used / Lowest % correct. List rows: stem preview (2 lines, KaTeX rendered), chapter/topic, used ×, % correct, status. Row actions: Edit, Duplicate, Archive/Unarchive, **Delete**. Multi-select bulk: Set status, **Delete**. Buttons: **New question**, **Import**. Soft-deleted questions never appear (R1.1: difficulty, type, source, board year and tags removed).
+
+**Delete (R1.1, PRD A-17).** Confirm dialog with the count (bulk: type the number of questions to confirm). Server `delete_questions`: any question in an exam whose phase is `draft`, `scheduled`, `live` or `late_window` (an `always` exam stays current until archived) → `QUESTION_IN_USE`, nothing deleted, the dialog lists the blocking exams (links). Otherwise each question is **soft-deleted** (`deleted_at`; hidden everywhere in the admin bank and builder, excluded from duplicate checks, still shown in past exams' results and student reviews) if any exam or answer references it, or **hard-deleted** with its Storage images if nothing does. Toast "Deleted {n} questions". Audit `question.delete` per question.
 Empty: "No questions match these filters." (filters) / "Your question bank is empty. Add your first question or import a file." (no data).
 
 ### 6.6 Question editor `/admin/questions/new|[id]`
-Two columns on desktop (form | live preview); on mobile a Preview toggle. Fields: chapter (required), topic (optional, creatable), stem (textarea with LaTeX hint), stem image (upload ≤ 1 MB, png/jpg/webp), options A–D (text required unless that option has an image; optional images), correct option (radio), explanation (+ image), difficulty, type, source, board year, tags (creatable combobox), status. Buttons: **Save** (stays), **Save & add another**, **Cancel**.
+Two columns on desktop (form | live preview); on mobile a Preview toggle. Fields: chapter (required), topic (optional, creatable), stem (textarea with LaTeX hint), stem image (upload ≤ 1 MB, png/jpg/webp), options A–D (text required unless that option has an image; optional images), correct option (radio), explanation (+ image), status. Buttons: **Save** (stays), **Save & add another**, **Cancel**; existing questions also show **Delete** (danger, rules in §6.5).
 On save: if the `content_hash` matches another question → warning dialog "A question with the same text exists" (link) with **Save anyway** / **Cancel**. Editing a question that is used in an exam with attempts is allowed for typo fixes; the editor shows the banner "Used in {n} exams with attempts — changes affect past reviews" (correct option changes are **blocked** for such questions: `QUESTION_LOCKED_CORRECT_OPTION`).
 
-### 6.7 Import `/admin/questions/import`
-Steps: (1) **Download template** (`.xlsx` and `.csv`; columns `subject` (optional slug, default first subject), `chapter_number`, `topic` (created if missing), `stem`, `option_a`–`option_d`, `correct`, `explanation`, `difficulty`, `type`, `source`, `board_year`, `tags` (pipe-separated)) and upload (drag-drop or picker; `.csv`/`.xlsx` ≤ 5 MB, ≤ 2,000 rows) → (2) **Validation preview**: counts (valid / invalid / duplicates), a table of invalid rows with row number + column + message, and **Download error report (CSV)** → (3) choose default status for imported rows (Draft default) → **Import {n} valid questions** → (4) result: "Imported {n}. Skipped {d} duplicates, {e} invalid rows." Parsing errors (wrong headers) → step 1 error "The file's columns don't match the template."
+### 6.7 Import `/admin/questions/import` (R1.1)
+Steps:
+1. **Download template** (`.xlsx` with an *Instructions* sheet, and `.csv`). Columns: `subject` (optional slug, default first subject), `chapter_number`, `topic` (created if missing), `stem`, `option_a`–`option_d`, `correct`, `explanation`; **Excel only:** `stem_image`, `option_a_image`…`option_d_image`, `explanation_image` — a picture inserted with *Insert → Pictures → Place over cells* and anchored inside that cell (one per cell; PNG/JPG/WebP ≤ 1 MB). An option's text may be empty when that option has a picture. CSV is text-only. Legacy columns `difficulty`, `type`, `source`, `board_year`, `tags` are accepted and ignored (warning in step 2).
+2. **Upload** (drag-drop or picker; `.xlsx`/`.csv` ≤ 20 MB, ≤ 2,000 rows). The browser parses the file (rows → JSON; Excel pictures → per-cell images, type checked by magic bytes, ≤ 1 MB) and uploads rows JSON + images **directly to Supabase Storage** via signed upload URLs (progress bar); no file passes through the app server (free-tier request limits). Excel 365 "Place in Cell" pictures → `IMPORT_IMAGE_UNSUPPORTED` for that cell.
+3. **Validation preview** (server, Zod per row): counts (valid / invalid / duplicates / images), a table of invalid rows and image problems with row number + column + message, legacy-column warning, and **Download error report (CSV)**.
+4. Choose the default status for imported rows (Draft default) → **Import {n} valid questions** → staged images are moved into place and rows inserted in batches.
+5. Result: "Imported {n}. Skipped {d} duplicates, {e} invalid rows." **Cancel** at any step deletes the staged uploads; abandoned uploads are deleted automatically after 24 h.
+Parsing errors (wrong headers) → step 1 error "The file's columns don't match the template."
 
 ### 6.8 Exams `/admin/exams` and builder `/admin/exams/[examId]`
-List: filter by phase (Draft/Scheduled/Live/Late window/Closed/Archived), columns: title, phase chip, starts_at, questions, attempts, featured ★. Button **New exam** → `/admin/exams/new` (Settings form; Save creates a draft → builder).
+List: filter by phase (Draft/Scheduled/Live/Late window/Closed/Archived), columns: title, phase chip, audience (All / plan names), starts_at, questions, attempts. Button **New exam** → `/admin/exams/new` (Settings form; Save creates a draft → builder).
 
 Builder tabs:
 1. **Settings**: all fields of PRD A-10 with defaults (duration 30, marks per question 1, negative 0, mode fixed, live_ends_at = starts_at + duration, results/answers publish defaults per §7 rule). Locked fields (once attempts exist) are disabled with a lock icon + tooltip.
-2. **Questions**: left = bank browser (same filters as §6.5; questions already in the exam are marked "Added"); right = selected list with drag-handle reorder (keyboard: ↑/↓ buttons), remove ✕, running count and total marks. Only `active` questions can be added.
-3. **Audience**: radio **All active students** / **Selected students** (searchable multi-select by mobile/email/label + "Add all with label X").
-4. **Publish**: checklist (✔ title, ✔ ≥ 1 question, ✔ start time in the future or "publish as live now" confirm, ✔ times valid, ✔ audience non-empty), buttons **Preview as student** → `/admin/exams/:id/preview`, **Publish**, (published) **Unpublish** (only with 0 attempts), **Archive** (closed only), **Feature on homepage** toggle (unfeatures any other exam).
+2. **Questions**: left = bank browser (chapter, topic and text filters from §6.5; questions already in the exam are marked "Added"; soft-deleted questions never listed); right = selected list with drag-handle reorder (keyboard: ↑/↓ buttons), remove ✕, running count and total marks. Only `active` questions can be added.
+3. **Audience** (R1.1): radio **All active students** / **Students of these plans** (multi-select of plans; inactive plans are labelled). A student sees the exam when its audience is all active students or contains the student's current plan. The *selected students* audience no longer exists.
+4. **Publish**: checklist (✔ title, ✔ ≥ 1 question, ✔ start time in the future or "publish as live now" confirm, ✔ times valid, ✔ audience: all active students, or ≥ 1 plan), buttons **Preview as student** → `/admin/exams/:id/preview`, **Publish**, (published) **Unpublish** (only with 0 attempts), **Archive** (closed only). *(R1.1: the "Feature on homepage" toggle is removed.)*
 
 Publish errors map to inline checklist failures: `EXAM_INVALID_TIMES`, `EXAM_NO_QUESTIONS`, `EXAM_INACTIVE_QUESTIONS`, `EXAM_LOCKED` (edit after attempts).
 
@@ -431,7 +445,7 @@ Tabs and forms (each tab saves independently; success toast "Saved"; public page
 - **Brand**: name, logo upload (public bucket).
 - **Contact**: WhatsApp number/link, Messenger link, phone, email.
 - **Payments**: CRUD list of payment accounts (method, number, label, holder, instructions bn/en, active, order).
-- **Plans**: CRUD (code, names bn/en, duration days **or** fixed expiry date, price, features, highlight, active, order).
+- **Plans**: CRUD (code, names bn/en, duration days **or** fixed expiry date, price, features, highlight, active, order, **routine PDF**). R1.1: the PDF (application/pdf, ≤ 5 MB, uploaded directly to the public `plan-routines` bucket via a signed URL) is **required when creating** a plan (`ROUTINE_PDF_REQUIRED`) and can be replaced on edit; active plans without a PDF show a warning badge (no block).
 - **Homepage**: hero headline override (bn/en, optional), testimonials (text, attribution, optional photo), top performers (label, score text), FAQ items (q/a bn/en, order).
 - **Policies**: max devices (1–2), past results visible when inactive (toggle).
 - **Integrations**: Google Sheet status (last sync, pending/failed outbox counts), **Retry failed** button, email outbox failures list.
@@ -453,6 +467,6 @@ Table: time, actor (admin email / "system" / student mobile), action, entity lin
 8. **API error envelope** (all route handlers and server actions): `{ ok: false, error: { code: ErrorCode, message: string (i18n key), field?: string, meta?: object } }`. Success: `{ ok: true, data }`.
 
 ### 7.1 Canonical error codes
-`VALIDATION`, `UNAUTHENTICATED`, `SESSION_REVOKED`, `FORBIDDEN`, `NOT_FOUND`, `RATE_LIMITED`, `INVALID_CREDENTIALS`, `LOCKED`, `SUSPENDED`, `ACCESS_INACTIVE`, `PIN_SAME_AS_OLD`, `PIN_TOO_WEAK`, `TRX_DUPLICATE`, `PENDING_EXISTS`, `ADMISSION_NOT_PENDING`, `EXAM_NOT_AVAILABLE`, `EXAM_NOT_STARTED`, `EXAM_INVALID_TIMES`, `EXAM_NO_QUESTIONS`, `EXAM_INACTIVE_QUESTIONS`, `EXAM_LOCKED`, `ATTEMPT_CLOSED`, `QUESTION_DUPLICATE`, `QUESTION_LOCKED_CORRECT_OPTION`, `IMPORT_BAD_HEADERS`, `IMPORT_TOO_LARGE`, `INTERNAL`.
+`VALIDATION`, `UNAUTHENTICATED`, `SESSION_REVOKED`, `FORBIDDEN`, `NOT_FOUND`, `RATE_LIMITED`, `INVALID_CREDENTIALS`, `LOCKED`, `SUSPENDED`, `ACCESS_INACTIVE`, `PIN_SAME_AS_OLD`, `PIN_TOO_WEAK`, `TRX_DUPLICATE`, `PENDING_EXISTS`, `ADMISSION_NOT_PENDING`, `EXAM_NOT_AVAILABLE`, `EXAM_NOT_STARTED`, `EXAM_INVALID_TIMES`, `EXAM_NO_QUESTIONS`, `EXAM_INACTIVE_QUESTIONS`, `EXAM_LOCKED`, `ATTEMPT_CLOSED`, `QUESTION_DUPLICATE`, `QUESTION_LOCKED_CORRECT_OPTION`, `IMPORT_BAD_HEADERS`, `IMPORT_TOO_LARGE`, `INTERNAL`; added in R1.1: `QUESTION_IN_USE`, `IMPORT_IMAGE_INVALID`, `IMPORT_IMAGE_UNSUPPORTED`, `ROUTINE_PDF_REQUIRED`.
 
 Each code has `errors.<camelCode>` keys in `messages/bn.json` and `messages/en.json`.

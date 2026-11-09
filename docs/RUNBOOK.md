@@ -196,21 +196,43 @@ Check in the Supabase SQL editor: `select email, display_name, is_active from ad
 
 ## 8. Backups and restore
 
-- **Automatic**: Supabase Pro daily backups + PITR (7 days). Check *Database → Backups* monthly.
-- **Monthly manual dump** (keep 12, store off-site, encrypted). Use the *session* connection string (port 5432), not the transaction pooler:
+On the **Supabase Free plan there are no automatic restorable backups or PITR** (§2a). Back up **before every migration** and at least weekly. The repo has tested scripts (R1.1, Plan V2.03) that need only Docker and pnpm — no local `pg_dump` install.
 
-  ```bash
-  pg_dump "postgresql://postgres.<ref>:<db-password>@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres" --format=custom --no-owner --file "bytesizeict-$(date +%Y-%m).dump"
-  ```
+**1. Credentials file** (temporary, git-ignored; delete it afterwards). In the project root create `.env.production.local` with three values:
 
-- **Restore drill** (quarterly, into a scratch project, never production):
+```
+SUPABASE_DB_URL=postgresql://postgres.<ref>:<url-encoded-db-password>@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres
+NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<service_role key>
+```
 
-  ```bash
-  pg_restore --no-owner --clean --if-exists --dbname "<scratch-connection-string>" bytesizeict-YYYY-MM.dump
-  ```
+`SUPABASE_DB_URL` is the **Session pooler** URI from Supabase → **Connect** (the direct connection is IPv6-only on Free). Percent-encode special characters in the password (`@` → `%40`, `#` → `%23`, `/` → `%2F`).
 
-  Storage objects (question images, logo) are **not** in `pg_dump`; download the `question-media` and `public-assets` buckets with the Supabase CLI/S3 API alongside the dump.
-- PITR restore: *Database → Backups → Point in time* (restores the whole project; announce downtime).
+**2. Database** (roles, schema, data in COPY format + expected row counts):
+
+```bash
+pnpm backup:db
+```
+
+This writes `backups/<UTC timestamp>/{roles,schema,data}.sql` and `counts.tsv`. Data comes from the `public` schema only (the app's tables); Supabase-managed schemas such as `auth` are not used by the app and differ between Supabase cloud and the local CLI stack. `backups/` is git-ignored and the folder is created private (`chmod 700`).
+
+**3. Storage files** (question images, logo, routine PDFs — the database dump does not contain them), into **the same folder** as step 2:
+
+```bash
+node --env-file=.env.production.local --import tsx scripts/backup-storage.ts backups/<timestamp>
+```
+
+**4. Restore drill** (proves the backup is usable; restores into a throwaway local stack on its own ports, compares every table's row count, then removes the stack — never touches production or the dev stack):
+
+```bash
+pnpm restore:check backups/<timestamp>
+```
+
+Expect `RESTORE OK: <n> tables, <m> rows match the backup.`
+
+**5. Clean up:** `rm .env.production.local`; copy the backup folder to encrypted off-site storage (keep the last 12); never commit it.
+
+**Restoring production** (only after a real incident): create a fresh Supabase project (or reset the schema), then apply `roles.sql`, `schema.sql`, and `data.sql` with `SET session_replication_role = replica;` (exactly what `scripts/restore-check.sh` does), upload the saved Storage files back into their buckets, and re-create what dumps do not contain: the pg_cron jobs (re-run `supabase/migrations/0012_cron.sql` and the cleanup job from `0013`) and the Vault secrets (§2.5). If you upgrade to Pro later, PITR (*Database → Backups → Point in time*) replaces most of this.
 
 ---
 

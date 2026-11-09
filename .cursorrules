@@ -8,16 +8,17 @@ Before any edit or mutating command, read IN FULL, in order:
 3. docs/03_UI_Spec.md  (design tokens, component states)
 4. docs/04_TRD.md      (locked stack + exact versions, folder structure, API contracts, security)
 5. docs/05_Schema.md   (DDL, RLS, SQL functions, auth flow)
-6. docs/06_Plan.md     (checklist; find "Current Step")
+6. docs/06_Plan.md     (V1 checklist + Decision Log: history/context)
+7. docs/07_Plan_V2.md  (ACTIVE checklist for R1.1/V2; find "Current Step", owner decisions §2, free-tier rules §3)
 Then state which plan step you are executing. If the request maps to no step, ask before proceeding.
-docs 01–06 override the original concept file.
+docs 01–07 override the original concept file.
 
 ## Plan discipline
 - Execute steps strictly in order; respect Deps; one step at a time; scoped diffs.
-- AFTER EVERY COMPLETED STEP, update docs/06_Plan.md in the same turn:
+- AFTER EVERY COMPLETED STEP, update the active plan docs/07_Plan_V2.md in the same turn:
   tick [x] (or [!] blocked / [~] in progress) → fill "Done: YYYY-MM-DD — summary; files; verification"
   → advance "Current Step" → update the Progress table → add a Decision Log row for any deviation.
-- Never tick a step unless its Verify check passed. At phase gates run `pnpm run ci` and stop for review.
+- Never tick a step unless its Verify check passed. At phase gates (V2.09, V2.13, V2.18, V2.23, V2.29, V2.36) run `pnpm run ci` and stop for review.
 
 ## Conflicts
 - Technical precedence: 05_Schema > 04_TRD > 02_AppFlow > 03_UI_Spec > 01_PRD. Scope: 01_PRD wins.
@@ -25,7 +26,10 @@ docs 01–06 override the original concept file.
 - Changing a locked decision: get approval → update docs first → log → implement.
 
 ## Hard rules
-- Never build PRD §6 Non-Goals or R2-reserved tables.
+- Never build PRD §6 Non-Goals or R2-reserved tables. Student groups = plans only.
+- FREE TIERS ONLY (TRD §13): nothing may need a paid Vercel/Supabase/Resend/Google plan. Uploads go straight to Supabase
+  Storage via signed URLs (never through the app server); no long-running server work; no Vercel Cron/Blob/KV;
+  no Supabase image transformations.
 - Only TRD §2 packages at EXACT versions (pnpm add -E; no ^ or ~). No new deps without a Decision Log entry.
   Forbidden: any ORM, Supabase Auth/@supabase/ssr, NextAuth, Redux/Zustand/Jotai, TanStack Query, UI kits with themes,
   CSS-in-JS, axios, moment, npm `xlsx`, middleware.ts (use src/proxy.ts). pnpm + Node 22 only.
@@ -48,7 +52,8 @@ docs 01–06 override the original concept file.
 - Envelope: { ok: true, data } | { ok: false, error: { code, message, field?, meta? } } with canonical ErrorCodes (AppFlow §7.1).
 - Use exact route paths, enum values, state names and error codes from the docs.
 - Tailwind with design tokens only: no hex literals, no arbitrary values, no inline styles (except dynamic widths).
-- All UI strings via next-intl; update messages/bn.json AND messages/en.json together. Bangla default. Latin digits.
+- All UI strings via the message catalogs (next-intl/server on the server, src/lib/i18n/client.tsx in client components);
+  update messages/bn.json AND messages/en.json together. Bangla default. Latin digits.
   Times displayed in Asia/Dhaka.
 - Mobile-first (360 px), touch targets ≥ 48 px, one primary action per screen, dark mode via tokens.
 - TS strict, no `any`, no non-null assertions on external data. Match surrounding style; comments explain why.
@@ -57,4 +62,4 @@ docs 01–06 override the original concept file.
 
 ## Reporting
 End each turn with: step ID(s), files changed, verification evidence, new Current Step, Decision Log entries / open questions.
-Commit only when asked: one commit per step, message "P<id>: <summary>".
+Commit only when asked: one commit per step, message "P<id>: <summary>" (V1) / "V2.<nn>: <summary>" (V2), unless the user specifies one.

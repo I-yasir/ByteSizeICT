@@ -1,6 +1,6 @@
 # 05 — Database Schema, RLS & Auth Flow
 
-Status: **Locked for R1.** Target: Supabase Postgres 17. The DDL below is normative. Migrations in `supabase/migrations/` must reproduce it exactly (split per §10). Naming: `snake_case`, plural table names, `uuid` PKs (`gen_random_uuid()`) unless noted, `timestamptz` everywhere (UTC), every mutable table has `created_at` + `updated_at` maintained by the trigger `set_updated_at()`.
+Status: **Locked for R1, amended by R1.1 (2026-11-09, migrations 0014–0019, `07_Plan_V2.md`).** The DDL below shows the R1.1 end state; R1-only objects are marked. Target: Supabase Postgres 17. The DDL below is normative. Migrations in `supabase/migrations/` must reproduce it exactly (split per §10). Naming: `snake_case`, plural table names, `uuid` PKs (`gen_random_uuid()`) unless noted, `timestamptz` everywhere (UTC), every mutable table has `created_at` + `updated_at` maintained by the trigger `set_updated_at()`.
 
 ---
 
@@ -18,13 +18,11 @@ erDiagram
   chapters ||--o{ topics : contains
   chapters ||--o{ questions : classifies
   topics ||--o{ questions : classifies
-  questions ||--o{ question_tags : tagged
-  tags ||--o{ question_tags : tags
   subjects ||--o{ exams : "subject of"
   exams ||--o{ exam_questions : includes
   questions ||--o{ exam_questions : "used in"
-  exams ||--o{ exam_assignees : "assigned to"
-  students ||--o{ exam_assignees : assigned
+  exams ||--o{ exam_audience_plans : "audience (R1.1)"
+  plans ||--o{ exam_audience_plans : "targeted by"
   exams ||--o{ exam_attempts : has
   students ||--o{ exam_attempts : takes
   exam_attempts ||--o{ attempt_answers : records
@@ -48,12 +46,11 @@ create type admission_status    as enum ('pending','approved','rejected');
 create type admission_kind      as enum ('new','renewal');
 create type student_status      as enum ('active','suspended','cancelled');
 create type credentials_status  as enum ('pending','sent','failed');
-create type difficulty_level    as enum ('easy','medium','hard');
-create type question_type       as enum ('knowledge','application','multi_point');
+-- difficulty_level, question_type: R1 only — dropped in R1.1 (0014_v2_drop_question_meta.sql)
 create type content_status      as enum ('draft','active','archived');
 create type exam_status         as enum ('draft','published','archived');
 create type access_mode         as enum ('fixed','window','always');
-create type exam_audience       as enum ('all_active','selected');
+create type exam_audience       as enum ('all_active','plans');   -- R1.1 (0018); R1 had ('all_active','selected')
 create type option_key          as enum ('A','B','C','D');
 create type attempt_status      as enum ('in_progress','submitted','auto_submitted');
 create type outbox_kind         as enum ('email_renewal','email_rejection','email_admin_alert',
@@ -160,6 +157,7 @@ create table plans (
   is_highlighted    boolean not null default false,
   is_active         boolean not null default true,
   sort_order        integer not null default 0,
+  routine_pdf_path  text,                    -- R1.1 (0017): 'plans/<uuid>.pdf' in bucket plan-routines; required on create (app rule), nullable for legacy plans
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now(),
   constraint plans_duration_xor check ((duration_days is null) <> (fixed_expires_at is null))
@@ -266,11 +264,7 @@ create table topics (
   unique (chapter_id, name_en)
 );
 
-create table tags (
-  id          uuid primary key default gen_random_uuid(),
-  name        citext not null unique check (char_length(name) between 1 and 40),
-  created_at  timestamptz not null default now()
-);
+-- tags: R1 only — dropped in R1.1 (0014)
 
 create table questions (
   id                      uuid primary key default gen_random_uuid(),
@@ -289,10 +283,7 @@ create table questions (
   correct_option          option_key not null,
   explanation             text check (char_length(explanation) <= 8000),
   explanation_image_path  text,
-  difficulty              difficulty_level not null default 'medium',
-  qtype                   question_type    not null default 'knowledge',
-  source                  text check (char_length(source) <= 120),       -- e.g. "Dhaka Board"
-  board_year              smallint check (board_year between 2000 and 2100),
+  -- difficulty, qtype, source, board_year: R1 only — dropped in R1.1 (0014)
   status                  content_status not null default 'draft',
   content_hash            text not null,          -- set by trigger, see below
   times_used              integer not null default 0,   -- # exams with ≥1 final attempt that include it
@@ -300,6 +291,8 @@ create table questions (
   times_correct           integer not null default 0,
   created_by              uuid references admins(id) on delete set null,
   updated_by              uuid references admins(id) on delete set null,
+  deleted_at              timestamptz,             -- R1.1 (0015): soft delete (used in past exams); hidden from bank/builder/search/duplicates
+  deleted_by              uuid references admins(id) on delete set null,   -- R1.1 (0015)
   created_at              timestamptz not null default now(),
   updated_at              timestamptz not null default now(),
   constraint questions_options_present check (
@@ -308,17 +301,12 @@ create table questions (
 );
 create index questions_chapter_status_idx on questions (chapter_id, status);
 create index questions_topic_idx          on questions (topic_id);
-create index questions_difficulty_idx     on questions (difficulty);
+create index questions_live_idx           on questions (chapter_id, status) where deleted_at is null;   -- R1.1 (0015)
 create index questions_hash_idx           on questions (content_hash);
 create index questions_stem_trgm_idx      on questions using gin (stem gin_trgm_ops);
 create index questions_created_idx        on questions (created_at desc);
 
-create table question_tags (
-  question_id uuid not null references questions(id) on delete cascade,
-  tag_id      uuid not null references tags(id) on delete cascade,
-  primary key (question_id, tag_id)
-);
-create index question_tags_tag_idx on question_tags (tag_id);
+-- question_tags: R1 only — dropped in R1.1 (0014)
 
 -- content_hash: sha256 of stem + options, EACH lower-cased, whitespace-collapsed and trimmed, joined by '|' (hex).
 create or replace function questions_set_hash() returns trigger language plpgsql as $$
@@ -353,7 +341,7 @@ create table exams (
   chapter_label          text check (char_length(chapter_label) <= 80),   -- display text e.g. "Chapter 3"
   status                 exam_status not null default 'draft',
   is_sample              boolean not null default false,
-  is_featured            boolean not null default false,
+  -- is_featured: R1 only — dropped in R1.1 (0019) with index exams_one_featured
   starts_at              timestamptz,                -- required to publish (non-sample)
   live_ends_at           timestamptz,                -- default starts_at + duration
   access_mode            access_mode not null default 'fixed',
@@ -380,7 +368,6 @@ create table exams (
     or (access_mode <> 'window' and late_until is null)),
   constraint exams_published_has_times check (status = 'draft' or is_sample or (starts_at is not null and live_ends_at is not null))
 );
-create unique index exams_one_featured on exams (is_featured) where is_featured;
 create unique index exams_one_sample   on exams (is_sample) where is_sample and status = 'published';
 create index exams_status_starts_idx   on exams (status, starts_at);
 
@@ -393,12 +380,15 @@ create table exam_questions (
 );
 create index exam_questions_question_idx on exam_questions (question_id);
 
-create table exam_assignees (
-  exam_id     uuid not null references exams(id) on delete cascade,
-  student_id  uuid not null references students(id) on delete cascade,
-  primary key (exam_id, student_id)
+-- exam_assignees ("selected students" audience): R1 only — dropped in R1.1 (0018)
+
+-- R1.1 (0018): an exam with audience = 'plans' is visible to students whose current plan is listed here.
+create table exam_audience_plans (
+  exam_id  uuid not null references exams(id) on delete cascade,
+  plan_id  uuid not null references plans(id) on delete restrict,
+  primary key (exam_id, plan_id)
 );
-create index exam_assignees_student_idx on exam_assignees (student_id);
+create index exam_audience_plans_plan_idx on exam_audience_plans (plan_id);
 ```
 Triggers on exams/exam_questions:
 - `exam_questions_count_trg` (after insert/delete) → recompute `exams.question_count`.
@@ -492,7 +482,7 @@ create table outbox (
 create index outbox_ready_idx on outbox (next_attempt_at, id) where status in ('pending','processing');
 ```
 
-**Audit actions (canonical):** `admission.approve`, `admission.reject`, `student.extend`, `student.set_expiry`, `student.cancel`, `student.suspend`, `student.reactivate`, `student.pin_reset`, `student.credentials_resend`, `student.credentials_email_failed`, `student.force_logout`, `student.update`, `student.pin_changed_by_student`, `exam.create`, `exam.publish`, `exam.unpublish`, `exam.archive`, `exam.feature`, `question.import`, `setting.update`, `plan.upsert`, `payment_account.upsert`.
+**Audit actions (canonical):** `admission.approve`, `admission.reject`, `student.extend`, `student.set_expiry`, `student.cancel`, `student.suspend`, `student.reactivate`, `student.pin_reset`, `student.credentials_resend`, `student.credentials_email_failed`, `student.force_logout`, `student.update`, `student.pin_changed_by_student`, `exam.create`, `exam.publish`, `exam.unpublish`, `exam.archive`, `question.import`, `question.delete` (R1.1; meta `{mode: 'soft'|'hard'}`; `exam.feature` was R1 only), `setting.update`, `plan.upsert`, `payment_account.upsert`.
 
 ---
 
@@ -529,24 +519,21 @@ grant select on subjects, chapters to anon;
 create policy subjects_public_read on subjects for select to anon using (true);
 create policy chapters_public_read on chapters for select to anon using (true);
 
--- exams: column-level grant (no publish gates, no audience internals)
-grant select (id, title, description, subject_id, chapter_label, starts_at, live_ends_at, access_mode,
-              duration_minutes, marks_per_question, negative_mark, question_count, is_featured)
-  on exams to anon;
-create policy exams_public_routine on exams for select to anon
-  using (status = 'published' and not is_sample);
+-- exams: R1 granted anon a column-level select + policy exams_public_routine for the public routine.
+-- R1.1 (0019) revokes both: visitors never read exam data (routine is per plan PDF; students read via the server).
 
--- 4) No policies on: admins, students, sessions, rate_limit_events, admissions, topics, tags, questions,
---    question_tags, exam_questions, exam_assignees, exam_attempts, attempt_answers, audit_log, outbox
+-- 4) No policies on: admins, students, sessions, rate_limit_events, admissions, topics, questions,
+--    exams (R1.1), exam_questions, exam_audience_plans, exam_attempts, attempt_answers, audit_log, outbox,
+--    question_import_batches
 --    → fully denied to anon/authenticated.
 
 -- 5) Functions: EXECUTE for service_role only (repeat for each function in §8)
 grant execute on function start_attempt(uuid, uuid) to service_role;
 -- … (one grant line per function)
 ```
-Storage policies: bucket `question-media` has **no** policies for anon/authenticated (service_role signs URLs). Bucket `public-assets` is public-read; writes service_role only.
+Storage policies: bucket `question-media` has **no** policies for anon/authenticated (service_role signs URLs). Bucket `public-assets` is public-read; writes service_role only. R1.1: bucket `plan-routines` is public-read (`application/pdf`, 5 MB limit), writes only through service-role signed upload URLs; bucket `import-uploads` is private with no anon/authenticated policies (20 MB limit).
 
-**pgTAP tests required** (`supabase/tests/rls.test.sql`): RLS enabled on all public tables; `anon` cannot select from `questions`, `students`, `admissions`, `exam_attempts`, `attempt_answers`, `sessions`; `anon` can select published exams only with the granted columns (selecting `answers_publish_at` errors); `anon` cannot execute any public function.
+**pgTAP tests required** (`supabase/tests/rls.test.sql`): RLS enabled on all public tables; `anon` cannot select from `questions`, `students`, `admissions`, `exam_attempts`, `attempt_answers`, `sessions`; `anon` cannot select from `exams` (R1.1; R1 allowed published exams on granted columns); `anon` cannot execute any public function.
 
 ### 7.1 Auth flow (end-to-end)
 
@@ -592,7 +579,7 @@ All functions: `language plpgsql` (or `sql`), `security definer`, `set search_pa
 | --- | --- | --- |
 | `student_access_state` | `(s students, at timestamptz default now()) returns text` (immutable-ish, `stable`) | `suspended` if status='suspended'; `cancelled` if 'cancelled'; `expired` if `at < access_starts_at or at >= access_expires_at`; else `active`. |
 | `exam_phase` | `(e exams, at timestamptz default now()) returns text` | `archived` / `draft` by status; sample exams → `live`; `scheduled` if `at < starts_at`; `live` if `at < live_ends_at`; `late_window` if (`window` and `at < late_until`) or `always`; else `closed`. |
-| `student_is_assigned` | `(p_exam exams, p_student_id uuid) returns boolean` | `audience='all_active'` → true; else exists in `exam_assignees`. |
+| `student_is_assigned` | `(p_exam exams, p_student_id uuid) returns boolean` | R1.1: `audience='all_active'` → true; `audience='plans'` → exists in `exam_audience_plans` with the student's current `plan_id` (null plan → false). (R1: `selected` → exists in `exam_assignees`.) |
 | `student_exam_cards` | `(p_student_id uuid) returns table(exam_id, title, chapter_label, starts_at, live_ends_at, late_until, duration_minutes, question_count, total_marks, phase, card_status, attempt_id, attempt_status, score)` | Published non-sample exams assigned to the student; `card_status` per `02_AppFlow.md` §3.5 (`completed`, `in_progress`, `locked`, `upcoming`, `live`, `missed_available`, `missed`). Calls `finalize_attempt_if_overdue` for overdue attempts first. |
 
 **View** `paper_questions` (no answers):
@@ -660,18 +647,23 @@ Vault secrets `site_url` and `cron_secret` are created manually per environment 
 | `content_hashes(p_items jsonb) returns table(idx int, hash text)` | Batch hashing for import previews (`[{stem,a,b,c,d}]`). |
 | `questions.correct_rate numeric` (generated, stored) | `times_correct / times_answered` (4 dp), null when unanswered; indexed for "lowest % correct". |
 | trigger `questions_lock_correct_option_trg` | `QUESTION_LOCKED_CORRECT_OPTION` when `correct_option` changes and the question is in any exam with attempts. |
-| table `question_import_batches(id, admin_id → admins, rows jsonb, summary jsonb, created_at, expires_at = now()+30 min)` | Validated import rows awaiting commit; RLS forced, service_role only; cron `cleanup-import-batches` every 30 min. |
+| table `question_import_batches(id, admin_id → admins, rows jsonb, summary jsonb, created_at, expires_at = now()+30 min; R1.1 adds images jsonb, staged_paths text[])` | Validated import rows awaiting commit; RLS forced, service_role only; cron `cleanup-import-batches` every 30 min. |
 | `set_exam_questions(p_exam_id, p_question_ids uuid[]) returns int` | Atomic replace in order, de-duplicated; `EXAM_INACTIVE_QUESTIONS` unless all exist and are active; lock trigger applies. |
-| `set_exam_audience(p_exam_id, p_audience, p_student_ids uuid[]) returns int` | Sets audience; replaces assignees (only existing students) when `selected`. |
-| `set_question_tags(p_question_id, p_tag_ids uuid[]) returns void` | Atomic replace of a question's tags. |
+| `set_exam_audience(p_exam_id, p_audience, p_plan_ids uuid[]) returns int` | R1.1 (0018): sets audience; replaces `exam_audience_plans` (existing plans only) when `plans`, clears them for `all_active`. (R1 signature took `p_student_ids`.) |
+| ~~`set_question_tags`~~ | R1 only — dropped in R1.1 (0014). |
+
+### 8.7 R1.1 functions (`0015_v2_question_delete.sql`)
+| Function | Signature | Behaviour |
+| --- | --- | --- |
+| `delete_questions` | `(p_admin uuid, p_ids uuid[]) returns table(question_id uuid, mode text, image_paths text[])` | Raises `QUESTION_IN_USE` (detail: JSON list of blocking exam ids/titles) if any id is in `exam_questions` of an exam whose `exam_phase` is `draft`, `scheduled`, `live` or `late_window`; nothing is changed then. Otherwise per question: referenced by any `exam_questions` or `attempt_answers` row → set `deleted_at = now()`, `deleted_by = p_admin` (`mode='soft'`); unreferenced → delete the row (`mode='hard'`, returns its stem/option/explanation image paths for Storage cleanup). One `log_audit_admin(p_admin, 'question.delete', 'question', id, before, null, {mode})` per question. `set_exam_questions` rejects soft-deleted ids (`EXAM_INACTIVE_QUESTIONS`). |
 
 ## 9. Seed Data (`supabase/seed.sql`, local/dev only)
 - Subject `ict` (তথ্য ও যোগাযোগ প্রযুক্তি / ICT) with HSC chapters: 1 ICT: World & Bangladesh Perspective · 2 Communication Systems & Networking · 3 Number Systems & Digital Devices · 4 Introduction to Web Design & HTML · 5 Programming Language · 6 Database Management System. 2–3 topics each (e.g., Ch 3: Binary Conversion, Logic Gates, Boolean Algebra).
 - 3 plans: `1-month` (30 days, ৳500), `3-months` (90 days, ৳1,200, highlighted), `full-course` (fixed expiry, ৳2,500).
 - 3 payment accounts (bKash, Nagad, Rocket) with placeholder numbers `01XXXXXXXXX`.
 - `app_settings` rows for every key with sensible defaults (`auth.maxDevices=1`, `results.visibleWhenInactive=true`).
-- 40 active questions across chapters (Bangla and English mix, ≥ 5 with LaTeX, code snippets). No images: Storage objects cannot be created from SQL; image fixtures are uploaded by P2.12 tests.
-- 1 published sample exam (8 questions), 1 scheduled + featured exam (tomorrow 20:00 Dhaka), 1 live exam (window mode), 1 closed exam with 2 attempts scored by `finalize_overdue_attempts()`. The seed is generated (see the header comment of `supabase/seed.sql`).
+- 40 active questions across chapters (Bangla and English mix, ≥ 5 with LaTeX, code snippets). R1.1: no tags/difficulty/type/source/board year; seed exams use `audience = 'all_active'`; plans have no routine PDF (Storage objects cannot be created from SQL). No images: Storage objects cannot be created from SQL; image fixtures are uploaded by P2.12 tests.
+- 1 published sample exam (8 questions), 1 scheduled exam (tomorrow 20:00 Dhaka; featured in R1, no featured flag in R1.1), 1 live exam (window mode), 1 closed exam with 2 attempts scored by `finalize_overdue_attempts()`. The seed is generated (see the header comment of `supabase/seed.sql`).
 - 4 students (all PIN `246810`): `01700000001` active, `01700000002` expired, `01700000003` cancelled, `01700000004` active with `must_change_pin=true`; 1 admin `admin@local.test` (password `local-admin-password`). **Seed credentials exist only in the local seed and must never be used in production.**
 
 ---
@@ -682,8 +674,8 @@ Vault secrets `site_url` and `cron_secret` are created manually per environment 
 | `0001_extensions_enums.sql` | §2 |
 | `0002_identity.sql` | admins, students (no plan FK), sessions, rate_limit_events, triggers |
 | `0003_commerce.sql` | plans, payment_accounts, app_settings, admissions, students.plan_id FK |
-| `0004_content.sql` | subjects, chapters, topics, tags, questions (+ triggers), question_tags |
-| `0005_exams.sql` | exams, exam_questions, exam_assignees, count + lock triggers |
+| `0004_content.sql` | subjects, chapters, topics, tags, questions (+ triggers), question_tags (tags/question_tags dropped in 0014) |
+| `0005_exams.sql` | exams, exam_questions, exam_assignees, count + lock triggers (exam_assignees dropped in 0018) |
 | `0006_attempts.sql` | exam_attempts, attempt_answers |
 | `0007_ops.sql` | audit_log (+ immutability), outbox |
 | `0008_rls.sql` | §7 RLS, grants, storage buckets + policies |
@@ -692,8 +684,14 @@ Vault secrets `site_url` and `cron_secret` are created manually per environment 
 | `0011_results_admissions_fn.sql` | rank, stats, summary, admissions, student admin ops, sessions, audit, outbox fns |
 | `0012_cron.sql` | pg_cron jobs |
 | `0013_phase2_support.sql` | content-hash function, `correct_rate`, correct-option lock trigger, `question_import_batches`, atomic setters (§8.6) |
+| `0014_v2_drop_question_meta.sql` | R1.1, destructive: drop `questions.difficulty/qtype/source/board_year`, `question_tags`, `tags`, enums `difficulty_level`/`question_type`, `set_question_tags` |
+| `0015_v2_question_delete.sql` | R1.1: `questions.deleted_at/deleted_by`, `questions_live_idx`, `delete_questions` (§8.7), `set_exam_questions` rejects deleted |
+| `0016_v2_import_uploads.sql` | R1.1: bucket `import-uploads`, `question_import_batches.images/staged_paths` |
+| `0017_v2_plan_routines.sql` | R1.1: `plans.routine_pdf_path`, public bucket `plan-routines` |
+| `0018_v2_exam_audience_plans.sql` | R1.1, destructive: enum swap `exam_audience` → `('all_active','plans')` (`selected` → `all_active`), `exam_audience_plans`, drop `exam_assignees`, rewrite `student_is_assigned`, `set_exam_audience` and dependants |
+| `0019_v2_public_surface.sql` | R1.1, destructive: revoke anon `select` on `exams` + drop `exams_public_routine`; drop `exams.is_featured` + `exams_one_featured` |
 
 Rule: **never edit an applied migration**; add a new numbered file. After any migration: `pnpm db:reset && pnpm db:types && pnpm db:test`.
 
 ## 11. R2-Reserved (do NOT create in R1)
-`announcements`, `doubts`, `student_groups`, `group_members`, `attempt_events` (tab switches), `email_templates` (editable). Columns already present for R2: `students.display_name`, `exam_attempts.tab_switch_count`.
+`announcements`, `doubts`, `attempt_events` (tab switches), `email_templates` (editable). (`student_groups`/`group_members` are no longer planned: R1.1 uses plans as groups via `exam_audience_plans`.) Columns already present for R2: `students.display_name`, `exam_attempts.tab_switch_count`.

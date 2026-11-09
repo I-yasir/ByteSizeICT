@@ -1,6 +1,6 @@
 # 03 — UI Specification & Design System
 
-Status: **Locked for R1.** All values below are tokens. Components must use tokens (Tailwind theme utilities generated from CSS variables). **Never** hard-code hex values, px font sizes or arbitrary spacing in components.
+Status: **Locked for R1, amended by R1.1 (2026-11-09).** All values below are tokens. Components must use tokens (Tailwind theme utilities generated from CSS variables). **Never** hard-code hex values, px font sizes or arbitrary spacing in components.
 Implementation file: `src/app/globals.css` (Tailwind v4 `@theme` + CSS variables). Theme switching: `next-themes` with `attribute="class"` (`.dark` on `<html>`), default `system`.
 
 ---
@@ -10,7 +10,7 @@ Implementation file: `src/app/globals.css` (Tailwind v4 `@theme` + CSS variables
 | Principle | Enforceable rule |
 | --- | --- |
 | Mobile-first | Author base styles for 360 px; add `sm:`/`md:`/`lg:` overrides only. Test at 360, 768, 1280. |
-| One primary action per screen | At most **one** `Button variant="primary"` visible per viewport region (sticky bars count as their own region). |
+| One primary action per screen | At most **one** `Button variant="primary"` visible per viewport region (sticky bars count as their own region). **Exception (R1.1):** in the Plans & Pricing section every plan card's **Choose this plan** is primary (same colour as Enroll Now); each card is its own region. |
 | Large touch targets | Interactive elements ≥ **48×48 px** hit area (option rows ≥ 56 px tall). Spacing between adjacent targets ≥ 8 px. |
 | High contrast | Body text ≥ 4.5:1, large text/icons ≥ 3:1 against their background, in **both** themes (validated values below). |
 | Calm | Motion ≤ 200 ms for UI feedback, ≤ 300 ms for sheets/dialogs. No parallax, no autoplay media. `prefers-reduced-motion` disables all non-essential motion. |
@@ -259,7 +259,13 @@ Segments DD:HH:MM:SS (drop leading zero units), `--font-num` tabular, each segme
 Header 60 px, bg `--surface`, bottom border; logo 28 px tall. Icon buttons 44 px. Bottom nav: 64 px + safe area, 4 equal tabs, icon 24 + label `text-xs`; active: icon/label `--primary` + 3 px top indicator; inactive `--fg-subtle`.
 
 ### 7.22 Sticky Enroll bar & FABs (marketing)
-Enroll bar: 64 px + safe area, bg `--surface`, top border, full-width primary **Enroll Now** (lg). WhatsApp FAB: 56 px circle `--whatsapp`, positioned bottom 80 (above the bar) right 16; `aria-label="Chat on WhatsApp"`.
+Enroll bar: 64 px + safe area, bg `--surface`, top border, full-width primary **Enroll Now** (lg) → `/#pricing` (R1.1; every Enroll Now button targets the pricing section). WhatsApp FAB: 56 px circle `--whatsapp`, positioned bottom 80 (above the bar) right 16; `aria-label="Chat on WhatsApp"`.
+
+### 7.23 Plan card (marketing, R1.1)
+Card (§7.4) in the pricing grid (1 column mobile, 3 at ≥ 768; section `id="pricing"` with `scroll-margin-top` = header height). Content top → bottom: "Popular" badge (highlighted plan, `primary` badge), name (`text-lg` 600), price (`text-2xl --font-num` 700), duration/expiry (`text-sm --fg-muted`), features list (check icons, `text-sm`), then the actions stacked full-width with 8 px gap: **View routine** (`secondary`, file icon; opens the PDF in a new tab, `rel="noopener noreferrer"`) with a small **Download** ghost link beside/below it — rendered only when the plan has a routine PDF — and **Choose this plan** (`primary`, md) → `/enroll?plan=<code>`. The same card, without "Choose this plan", is the single plan summary on `/enroll` (§4.3 AppFlow) and on `/routine`.
+
+### 7.24 Delete confirmation (admin, R1.1)
+Dialog (§7.11) with title "Delete {n} questions?", body explaining the outcome (used in past exams → hidden but kept for results; never used → erased with images), and a `danger` **Delete** button (initial focus on **Cancel**). Bulk delete adds a text field "Type {n} to confirm"; the button stays disabled until it matches. A `QUESTION_IN_USE` response replaces the body with the list of blocking exams (links) and only a **Close** button.
 
 ---
 
